@@ -1,0 +1,791 @@
+{
+  "type": "FeatureCollection",
+  "name": "important_places_mysuru",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 1,
+        "name": "KR Hospital (Krishna Rajendra)",
+        "type": "hospital",
+        "latitude": 12.3134,
+        "longitude": 76.6508,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6508,
+          12.3134
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 2,
+        "name": "Apollo BGS Hospitals Mysuru",
+        "type": "hospital",
+        "latitude": 12.2981,
+        "longitude": 76.6276,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6276,
+          12.2981
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 3,
+        "name": "Cheluvamba Hospital",
+        "type": "hospital",
+        "latitude": 12.3142,
+        "longitude": 76.6515,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6515,
+          12.3142
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 4,
+        "name": "Columbia Asia Hospital (Manipal)",
+        "type": "hospital",
+        "latitude": 12.3486,
+        "longitude": 76.6558,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6558,
+          12.3486
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 5,
+        "name": "JSS Hospital Mysuru",
+        "type": "hospital",
+        "latitude": 12.2954,
+        "longitude": 76.6582,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6582,
+          12.2954
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 6,
+        "name": "Cauvery Heart & Multi-Speciality Hospital",
+        "type": "hospital",
+        "latitude": 12.3023,
+        "longitude": 76.6812,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6812,
+          12.3023
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 7,
+        "name": "St. Joseph's Hospital",
+        "type": "hospital",
+        "latitude": 12.3275,
+        "longitude": 76.6534,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6534,
+          12.3275
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 8,
+        "name": "Holdsworth Memorial Mission Hospital",
+        "type": "hospital",
+        "latitude": 12.3168,
+        "longitude": 76.6511,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6511,
+          12.3168
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 9,
+        "name": "Demonstration School (RIE) Mysuru",
+        "type": "school",
+        "latitude": 12.3082,
+        "longitude": 76.6215,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6215,
+          12.3082
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 10,
+        "name": "St. Philomena's High School",
+        "type": "school",
+        "latitude": 12.3218,
+        "longitude": 76.6575,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6575,
+          12.3218
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 11,
+        "name": "Marimallappa High School",
+        "type": "school",
+        "latitude": 12.3045,
+        "longitude": 76.6432,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6432,
+          12.3045
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 12,
+        "name": "Sadvidya High School",
+        "type": "school",
+        "latitude": 12.3079,
+        "longitude": 76.6475,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6475,
+          12.3079
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 13,
+        "name": "Kendriya Vidyalaya Mysuru",
+        "type": "school",
+        "latitude": 12.3431,
+        "longitude": 76.6128,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6128,
+          12.3431
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 14,
+        "name": "CFTRI School",
+        "type": "school",
+        "latitude": 12.3175,
+        "longitude": 76.6421,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6421,
+          12.3175
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 15,
+        "name": "St. Joseph's Central School Vijayanagar",
+        "type": "school",
+        "latitude": 12.3385,
+        "longitude": 76.6042,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6042,
+          12.3385
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 16,
+        "name": "Kuvempu Nagar Govt High School",
+        "type": "school",
+        "latitude": 12.2856,
+        "longitude": 76.6264,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6264,
+          12.2856
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 17,
+        "name": "University of Mysore (Manasagangotri)",
+        "type": "college",
+        "latitude": 12.3051,
+        "longitude": 76.6198,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6198,
+          12.3051
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 18,
+        "name": "Mysore Medical College and Research Institute",
+        "type": "college",
+        "latitude": 12.314,
+        "longitude": 76.6504,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6504,
+          12.314
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 19,
+        "name": "Sri Jayachamarajendra College of Engineering (SJCE / JSS STU)",
+        "type": "college",
+        "latitude": 12.3146,
+        "longitude": 76.6134,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6134,
+          12.3146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 20,
+        "name": "National Institute of Engineering (NIE)",
+        "type": "college",
+        "latitude": 12.2842,
+        "longitude": 76.6415,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6415,
+          12.2842
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 21,
+        "name": "Maharaja's College Mysuru",
+        "type": "college",
+        "latitude": 12.3065,
+        "longitude": 76.6412,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6412,
+          12.3065
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 22,
+        "name": "Yuvaraja's College Mysuru",
+        "type": "college",
+        "latitude": 12.3048,
+        "longitude": 76.6341,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6341,
+          12.3048
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 23,
+        "name": "St. Philomena's College Bannimantap",
+        "type": "college",
+        "latitude": 12.3325,
+        "longitude": 76.6548,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6548,
+          12.3325
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 24,
+        "name": "Maharani's Science College for Women",
+        "type": "college",
+        "latitude": 12.3105,
+        "longitude": 76.6435,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6435,
+          12.3105
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 25,
+        "name": "JSS Dental College and Hospital",
+        "type": "college",
+        "latitude": 12.3402,
+        "longitude": 76.6571,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6571,
+          12.3402
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 26,
+        "name": "Mysuru City Bus Stand (CBS)",
+        "type": "bus_stop",
+        "latitude": 12.3072,
+        "longitude": 76.6531,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6531,
+          12.3072
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 27,
+        "name": "Mysuru Suburb KSRTC Bus Stand",
+        "type": "bus_stop",
+        "latitude": 12.3115,
+        "longitude": 76.6598,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6598,
+          12.3115
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 28,
+        "name": "Kuvempunagar Complex Bus Stop",
+        "type": "bus_stop",
+        "latitude": 12.2882,
+        "longitude": 76.6271,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6271,
+          12.2882
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 29,
+        "name": "Jayanagar Bus Terminus",
+        "type": "bus_stop",
+        "latitude": 12.2894,
+        "longitude": 76.6452,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6452,
+          12.2894
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 30,
+        "name": "Vijayanagar Water Tank Bus Stop",
+        "type": "bus_stop",
+        "latitude": 12.3364,
+        "longitude": 76.6085,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6085,
+          12.3364
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 31,
+        "name": "Ramaswamy Circle Transit Stop",
+        "type": "bus_stop",
+        "latitude": 12.3021,
+        "longitude": 76.6451,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6451,
+          12.3021
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 32,
+        "name": "Hardwicke Circle Bus Stop",
+        "type": "bus_stop",
+        "latitude": 12.3048,
+        "longitude": 76.6468,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6468,
+          12.3048
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 33,
+        "name": "Bannimantap HUDCO Bus Stop",
+        "type": "bus_stop",
+        "latitude": 12.3391,
+        "longitude": 76.6521,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6521,
+          12.3391
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 34,
+        "name": "Mysuru Junction Railway Station (MYS)",
+        "type": "railway_station",
+        "latitude": 12.3162,
+        "longitude": 76.6445,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6445,
+          12.3162
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 35,
+        "name": "Chamarajapuram Railway Station",
+        "type": "railway_station",
+        "latitude": 12.2985,
+        "longitude": 76.6421,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6421,
+          12.2985
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 36,
+        "name": "Ashokapuram Railway Station",
+        "type": "railway_station",
+        "latitude": 12.2782,
+        "longitude": 76.6402,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6402,
+          12.2782
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 37,
+        "name": "Mysuru City Corporation Head Office",
+        "type": "govt_office",
+        "latitude": 12.3102,
+        "longitude": 76.6545,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6545,
+          12.3102
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 38,
+        "name": "Deputy Commissioner Office (DC Office)",
+        "type": "govt_office",
+        "latitude": 12.3075,
+        "longitude": 76.6425,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6425,
+          12.3075
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 39,
+        "name": "Mysuru Urban Development Authority (MUDA)",
+        "type": "govt_office",
+        "latitude": 12.3091,
+        "longitude": 76.6461,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6461,
+          12.3091
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 40,
+        "name": "Mysuru District Courts Complex",
+        "type": "govt_office",
+        "latitude": 12.3088,
+        "longitude": 76.6438,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6438,
+          12.3088
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 41,
+        "name": "Mysuru Police Commissioner Office",
+        "type": "govt_office",
+        "latitude": 12.3078,
+        "longitude": 76.6558,
+        "city": "Mysuru",
+        "verified": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.6558,
+          12.3078
+        ]
+      }
+    }
+  ]
+}

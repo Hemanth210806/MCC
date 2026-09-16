@@ -1,0 +1,15 @@
+.env
+.env.local
+__pycache__/
+*.pyc
+*.pyo
+instance/
+.pytest_cache/
+node_modules/
+dist/
+dist-ssr/
+*.local
+backend/ml/raw_datasets/
+backend/app/static/uploads/*
+!backend/app/static/uploads/.gitkeep
+backend/ml/dataset/

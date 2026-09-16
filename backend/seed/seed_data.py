@@ -26,13 +26,25 @@ def generate_point_in_polygon(polygon):
             return p.y, p.x  # lat, lng
     return (miny + maxy) / 2.0, (minx + maxx) / 2.0
 
-def seed_database():
-    app = create_app('development')
-    with app.app_context():
-        print("Resetting and recreating all database tables...")
-        db.drop_all()
-        db.create_all()
+def seed_database(app=None):
+    if not app:
+        try:
+            from flask import current_app
+            if current_app:
+                app = current_app._get_current_object()
+        except Exception:
+            pass
+    if not app:
+        app = create_app('production')
 
+    with app.app_context():
+        db.create_all()
+        from app.models.user import User
+        if User.query.filter_by(email='admin@mcc.gov.in').first():
+            print("Admin user already exists. Database already populated.")
+            return
+
+        print("Populating database tables...")
         backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
         # 1. Seed SLA Rules

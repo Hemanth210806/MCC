@@ -12,7 +12,9 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
     # Database: fallback to sqlite if MySQL is not reachable or configured as sqlite
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///mcc.db')
+    _default_db_dir = os.path.join(basedir, 'instance')
+    os.makedirs(_default_db_dir, exist_ok=True)
+    DATABASE_URL = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(_default_db_dir, 'mcc.db')}")
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

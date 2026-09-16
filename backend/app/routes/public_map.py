@@ -81,3 +81,13 @@ def get_ward_stats(ward_id):
             'total': pending + in_progress + verification + resolved
         }
     }), 200
+
+@public_map_bp.route('/seed', methods=['GET', 'POST'])
+def run_seed():
+    try:
+        from seed.seed_data import seed_database
+        seed_database()
+        return jsonify({'message': 'MCC Database initialized with 65 wards, departments, and demo accounts successfully!'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

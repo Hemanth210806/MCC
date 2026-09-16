@@ -7,9 +7,10 @@ bcrypt==4.1.2
 shapely==2.0.3
 scikit-learn>=1.4.0
 pillow>=10.0.0
-opencv-python>=4.8.0
+opencv-python-headless>=4.8.0
 kaggle==1.6.14
 python-dotenv==1.0.1
 requests>=2.31.0
 pytest>=8.0.0
 Alembic>=1.13.0
+gunicorn>=21.2.0

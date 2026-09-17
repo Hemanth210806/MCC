@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { 
   ShieldAlert, 
   CheckCircle2, 
@@ -174,10 +175,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                       <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>ORIGINAL ISSUE</div>
                       <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                         <img 
-                          src={`http://localhost:5000${item.original_photo}`} 
+                          src={getImageUrl(item.original_photo, item.category_name, false)} 
                           alt="Original" 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=300'; }}
+                          onError={(e) => { 
+                            const fb = getCategoryFallback(item.category_name, false);
+                            if (e.target.src !== fb) e.target.src = fb;
+                          }}
                         />
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
@@ -189,10 +193,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                       <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#166534', marginBottom: '4px' }}>OFFICER RESOLUTION</div>
                       <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                         <img 
-                          src={`http://localhost:5000${item.resolution_photo}`} 
+                          src={getImageUrl(item.resolution_photo, item.category_name, true)} 
                           alt="Resolution" 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1584467735815-f778f274e296?w=300'; }}
+                          onError={(e) => { 
+                            const fb = getCategoryFallback(item.category_name, true);
+                            if (e.target.src !== fb) e.target.src = fb;
+                          }}
                         />
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#166534', marginTop: '2px' }}>
@@ -454,10 +461,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 </div>
                 <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                   <img 
-                    src={`http://localhost:5000${selectedVerify.original_photo}`} 
+                    src={getImageUrl(selectedVerify.original_photo, selectedVerify.category_name, false)} 
                     alt="Original" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500'; }}
+                    onError={(e) => { 
+                      const fb = getCategoryFallback(selectedVerify.category_name, false);
+                      if (e.target.src !== fb) e.target.src = fb;
+                    }}
                   />
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
@@ -471,10 +481,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 </div>
                 <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                   <img 
-                    src={`http://localhost:5000${selectedVerify.resolution_photo}`} 
+                    src={getImageUrl(selectedVerify.resolution_photo, selectedVerify.category_name, true)} 
                     alt="Resolution" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1584467735815-f778f274e296?w=500'; }}
+                    onError={(e) => { 
+                      const fb = getCategoryFallback(selectedVerify.category_name, true);
+                      if (e.target.src !== fb) e.target.src = fb;
+                    }}
                   />
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#166534', marginTop: '6px' }}>

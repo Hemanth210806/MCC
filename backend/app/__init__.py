@@ -9,7 +9,7 @@ def create_app(config_name='development'):
 
     # Initialize extensions
     db.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')
@@ -32,10 +32,13 @@ def create_app(config_name='development'):
     app.register_blueprint(corporator_bp)
     app.register_blueprint(admin_bp)
 
-    # Static file serving for uploads in dev
+    # Static file serving for uploads in dev/production
     @app.route('/static/uploads/<path:filename>')
+    @app.route('/api/uploads/<path:filename>')
     def serve_upload(filename):
-        return send_from_directory(upload_dir, filename)
+        response = send_from_directory(upload_dir, filename)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
 
     @app.route('/api/health', methods=['GET'])
     def health_check():

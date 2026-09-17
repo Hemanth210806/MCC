@@ -1,11 +1,12 @@
 import React from 'react';
 import PriorityBadge from './PriorityBadge';
+import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { MapPin, Calendar, Building, Clock, ArrowRight } from 'lucide-react';
 
 export default function ComplaintCard({ complaint, onSelect, actionLabel = 'View Details' }) {
   const photoUrl = complaint.images && complaint.images.length > 0 
-    ? `http://localhost:5000${complaint.images[0].image_path}`
-    : null;
+    ? getImageUrl(complaint.images[0].image_path, complaint.category_name, false)
+    : getCategoryFallback(complaint.category_name, false);
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -30,7 +31,14 @@ export default function ComplaintCard({ complaint, onSelect, actionLabel = 'View
             src={photoUrl} 
             alt={complaint.category_name} 
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-            onError={(e) => { e.target.style.display = 'none'; }}
+            onError={(e) => { 
+              const fb = getCategoryFallback(complaint.category_name, false);
+              if (e.target.src !== fb) {
+                e.target.src = fb;
+              } else {
+                e.target.style.display = 'none';
+              }
+            }}
           />
         </div>
       )}

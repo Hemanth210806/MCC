@@ -1,0 +1,15 @@
+name: Keep Render Backend Warm
+
+on:
+  schedule:
+    # Runs every 10 minutes to prevent Render free-tier sleep
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping MCC Backend Health Check
+        run: |
+          curl -f -s https://mcc-backend-um72.onrender.com/api/health || echo "Ping completed"

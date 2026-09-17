@@ -170,7 +170,27 @@ def seed_database(app=None):
             cat_water.id: dept_water.id
         }
 
-        # Create a sample demo photo in uploads
+        # Demo category photos for issues and field officer resolution
+        cat_demo_photos = {
+            cat_garbage.id: {
+                'issue': 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600',
+                'resolution': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600'
+            },
+            cat_pothole.id: {
+                'issue': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600',
+                'resolution': 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600'
+            },
+            cat_light.id: {
+                'issue': 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=600',
+                'resolution': 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600'
+            },
+            cat_water.id: {
+                'issue': 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600',
+                'resolution': 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600'
+            }
+        }
+
+        # Create sample demo photos in uploads as local fallbacks
         upload_img_dir = os.path.join(backend_dir, 'app', 'static', 'uploads', 'complaints')
         res_img_dir = os.path.join(backend_dir, 'app', 'static', 'uploads', 'resolutions')
         os.makedirs(upload_img_dir, exist_ok=True)
@@ -263,8 +283,9 @@ def seed_database(app=None):
             db.session.add(c)
             db.session.flush()
 
-            # Image
-            img = ComplaintImage(complaint_id=c.id, image_path="/static/uploads/complaints/demo_issue.jpg")
+            # Category-specific authentic Image
+            issue_photo = cat_demo_photos.get(cat.id, {}).get('issue', '/static/uploads/complaints/demo_issue.jpg')
+            img = ComplaintImage(complaint_id=c.id, image_path=issue_photo)
             db.session.add(img)
 
             # Timeline
@@ -278,11 +299,12 @@ def seed_database(app=None):
                 res_lng = lng + random.uniform(-0.0001, 0.0001)
                 dist_m = haversine_distance_meters(lat, lng, res_lat, res_lng)
                 officer = random.choice(officer_objs)
+                res_photo = cat_demo_photos.get(cat.id, {}).get('resolution', '/static/uploads/resolutions/demo_resolution.jpg')
 
                 ev = ResolutionEvidence(
                     complaint_id=c.id,
                     officer_id=officer.id,
-                    photo_path="/static/uploads/resolutions/demo_resolution.jpg",
+                    photo_path=res_photo,
                     latitude=res_lat,
                     longitude=res_lng,
                     gps_accuracy_m=4.5,

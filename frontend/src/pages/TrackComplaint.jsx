@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StatusTimeline from '../components/StatusTimeline';
 import PriorityBadge from '../components/PriorityBadge';
 import api from '../services/api';
+import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { Search, MapPin, Building, Calendar, Star, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 export default function TrackComplaint() {
@@ -180,10 +181,13 @@ export default function TrackComplaint() {
                 <div style={{ height: '220px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                   {complaint.images && complaint.images.length > 0 ? (
                     <img 
-                      src={`http://localhost:5000${complaint.images[0].image_path}`} 
+                      src={getImageUrl(complaint.images[0].image_path, complaint.category_name, false)} 
                       alt="Original Issue" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500'; }}
+                      onError={(e) => { 
+                        const fb = getCategoryFallback(complaint.category_name, false);
+                        if (e.target.src !== fb) e.target.src = fb;
+                      }}
                     />
                   ) : (
                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>No Photo</div>
@@ -202,10 +206,13 @@ export default function TrackComplaint() {
                 <div style={{ height: '220px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                   {complaint.resolution_evidence ? (
                     <img 
-                      src={`http://localhost:5000${complaint.resolution_evidence.photo_path}`} 
+                      src={getImageUrl(complaint.resolution_evidence.photo_path, complaint.category_name, true)} 
                       alt="Resolution Proof" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1584467735815-f778f274e296?w=500'; }}
+                      onError={(e) => { 
+                        const fb = getCategoryFallback(complaint.category_name, true);
+                        if (e.target.src !== fb) e.target.src = fb;
+                      }}
                     />
                   ) : (
                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', textAlign: 'center', padding: '20px' }}>

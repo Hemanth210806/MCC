@@ -6,7 +6,8 @@ __pycache__/
 instance/
 .pytest_cache/
 node_modules/
-dist/
+frontend/dist/
+!backend/dist/
 dist-ssr/
 *.local
 backend/ml/raw_datasets/

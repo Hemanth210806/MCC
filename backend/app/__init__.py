@@ -32,6 +32,15 @@ def create_app(config_name='development'):
     app.register_blueprint(corporator_bp)
     app.register_blueprint(admin_bp)
 
+    # Determine frontend build directory (local development or production on Render)
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    possible_dist_dirs = [
+        os.path.join(backend_dir, 'dist'),
+        os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'dist')),
+        os.path.join(backend_dir, 'frontend_dist')
+    ]
+    frontend_dist = next((d for d in possible_dist_dirs if os.path.exists(d) and os.path.exists(os.path.join(d, 'index.html'))), None)
+
     # Static file serving for uploads in dev/production
     @app.route('/static/uploads/<path:filename>')
     @app.route('/api/uploads/<path:filename>')
@@ -46,7 +55,32 @@ def create_app(config_name='development'):
             'status': 'healthy',
             'service': 'Mysuru Civic Connect (MCC) API',
             'version': '2.0',
-            'city': 'Mysuru'
+            'city': 'Mysuru',
+            'frontend_served': frontend_dist is not None
         }, 200
 
+    # Serve Frontend Single Page App from Render root
+    if frontend_dist:
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_frontend(path):
+            if path.startswith('api/') or path.startswith('static/'):
+                return {"error": "Not Found"}, 404
+            
+            target_path = os.path.join(frontend_dist, path)
+            if path and os.path.exists(target_path) and not os.path.isdir(target_path):
+                return send_from_directory(frontend_dist, path)
+            return send_from_directory(frontend_dist, 'index.html')
+    else:
+        @app.route('/')
+        def serve_fallback_root():
+            return {
+                'service': 'Mysuru Civic Connect (MCC) API & Backend',
+                'status': 'online',
+                'api_base': '/api',
+                'health_check': '/api/health',
+                'frontend_status': 'Connect via Vercel (https://mysuru-civic-connect.vercel.app) or build frontend dist'
+            }, 200
+
     return app
+

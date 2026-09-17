@@ -1,6 +1,15 @@
-// Server base URL derived dynamically from environment or default
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-export const SERVER_URL = API_BASE.replace(/\/api\/?$/, '');
+// Server base URL derived dynamically from environment or origin
+const isSameOrigin = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('onrender.com') || window.location.hostname === 'localhost' && window.location.port === '5000');
+
+const API_BASE = isSameOrigin 
+  ? '/api' 
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+
+export const SERVER_URL = isSameOrigin 
+  ? (typeof window !== 'undefined' ? window.location.origin : '') 
+  : API_BASE.replace(/\/api\/?$/, '');
+
 
 // Verified high-quality civic issue and resolution evidence photographs
 export const CATEGORY_FALLBACKS = {

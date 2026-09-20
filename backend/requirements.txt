@@ -14,3 +14,6 @@ requests>=2.31.0
 pytest>=8.0.0
 Alembic>=1.13.0
 gunicorn>=21.2.0
+tensorflow-cpu>=2.15.0
+keras>=3.0.0
+

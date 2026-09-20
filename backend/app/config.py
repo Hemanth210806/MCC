@@ -24,7 +24,11 @@ class Config:
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
     # ML Config
-    ML_MODEL_PATH = os.path.join(basedir, os.environ.get('ML_MODEL_PATH', 'ml/model/mcc_classifier.h5'))
+    project_root = os.path.abspath(os.path.join(basedir, '..'))
+    default_ml_model_path = os.environ.get('ML_MODEL_PATH', os.path.join(project_root, 'models', 'mcc_mobilenetv2.keras'))
+    if not os.path.isabs(default_ml_model_path):
+        default_ml_model_path = os.path.join(project_root, default_ml_model_path)
+    ML_MODEL_PATH = default_ml_model_path
     ML_CONFIDENCE_THRESHOLD = float(os.environ.get('ML_CONFIDENCE_THRESHOLD', 0.60))
 
     # GIS / Analytics

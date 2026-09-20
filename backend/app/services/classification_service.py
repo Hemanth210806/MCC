@@ -28,8 +28,9 @@ class ClassificationService:
 
         try:
             predicted_cat, conf = predict(image_path)
-            low_conf = (conf < threshold)
-            status = 'LOW_CONFIDENCE' if low_conf else 'CLASSIFIED'
+            is_unrelated = predicted_cat == 'Other / Unrelated'
+            low_conf = (conf < threshold) or is_unrelated
+            status = 'REVIEW_REQUIRED' if is_unrelated else ('LOW_CONFIDENCE' if low_conf else 'CLASSIFIED')
 
             return {
                 'category_name': predicted_cat,

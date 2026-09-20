@@ -14,3 +14,8 @@ backend/ml/raw_datasets/
 backend/app/static/uploads/*
 !backend/app/static/uploads/.gitkeep
 backend/ml/dataset/
+data/
+reports/
+.venv/
+.venv*/
+

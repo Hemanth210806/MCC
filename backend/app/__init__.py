@@ -85,11 +85,13 @@ def create_app(config_name='development'):
     app.register_blueprint(corporator_bp)
     app.register_blueprint(admin_bp)
 
-    # Determine frontend build directory (local development or production on Render)
+    # Determine frontend build directory (local development or production on Render).
+    # Prefer the actual frontend build over any stale backend dist folder so the app
+    # does not keep serving an older compiled bundle after a rebuild.
     backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     possible_dist_dirs = [
-        os.path.join(backend_dir, 'dist'),
         os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'dist')),
+        os.path.join(backend_dir, 'dist'),
         os.path.join(backend_dir, 'frontend_dist')
     ]
     frontend_dist = next((d for d in possible_dist_dirs if os.path.exists(d) and os.path.exists(os.path.join(d, 'index.html'))), None)

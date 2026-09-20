@@ -11,6 +11,7 @@ export default function FileComplaint({ setActivePage }) {
   const [longitude, setLongitude] = useState(76.6394);
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
   const [locating, setLocating] = useState(false);
+  const [locationMode, setLocationMode] = useState('current');
   const [citizenName, setCitizenName] = useState('');
   const [citizenPhone, setCitizenPhone] = useState('');
   const [citizenEmail, setCitizenEmail] = useState('');
@@ -29,6 +30,49 @@ export default function FileComplaint({ setActivePage }) {
   // Wards GeoJSON for map display
   const [wardGeoJson, setWardGeoJson] = useState(null);
 
+  const fetchWardForPoint = async (lat, lng) => {
+    try {
+      const res = await api.get(`/public/wards/lookup?lat=${lat}&lng=${lng}`);
+      if (res.data) {
+        setWardInfo(res.data);
+        setIsOutsideMcc(Boolean(res.data.outside_mcc_boundary));
+      }
+    } catch (e) {
+      console.warn('Ward lookup failed:', e);
+    }
+  };
+
+  const requestCurrentLocation = (silent = false) => {
+    if (!navigator.geolocation) {
+      if (!silent) {
+        setErrorMsg('Geolocation is not supported by your browser. Please drag the pin on the map.');
+      }
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const nextLat = pos.coords.latitude;
+        const nextLng = pos.coords.longitude;
+        setLatitude(nextLat);
+        setLongitude(nextLng);
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+        setLocationMode('current');
+        setLocating(false);
+        setErrorMsg('');
+        fetchWardForPoint(nextLat, nextLng);
+      },
+      (err) => {
+        setLocating(false);
+        if (!silent) {
+          setErrorMsg('Location permission denied or unavailable. You can click on the map to pin your location.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   useEffect(() => {
     const fetchWards = async () => {
       try {
@@ -39,22 +83,14 @@ export default function FileComplaint({ setActivePage }) {
       } catch (err) {}
     };
     fetchWards();
+    requestCurrentLocation(true);
   }, []);
 
   // Check ward boundary whenever coordinates change
   useEffect(() => {
-    const checkWard = async () => {
-      try {
-        const res = await api.get(`/public/wards/lookup?lat=${latitude}&lng=${longitude}`);
-        if (res.data) {
-          setWardInfo(res.data);
-          setIsOutsideMcc(Boolean(res.data.outside_mcc_boundary));
-        }
-      } catch (e) {
-        console.warn('Ward lookup failed:', e);
-      }
-    };
-    checkWard();
+    if (latitude && longitude) {
+      fetchWardForPoint(latitude, longitude);
+    }
   }, [latitude, longitude]);
 
   const handlePhotoChange = async (e) => {
@@ -77,6 +113,7 @@ export default function FileComplaint({ setActivePage }) {
         detectedTime = exif.timestamp;
         setLatitude(targetLat);
         setLongitude(targetLng);
+        setLocationMode('exif');
         if (exif.source === 'ocr') {
           setExifBadge({
             type: 'exif',
@@ -89,9 +126,26 @@ export default function FileComplaint({ setActivePage }) {
           });
         }
       } else {
+        const currentLocationAvailable = navigator.geolocation;
+        if (currentLocationAvailable && locationMode !== 'manual') {
+          const fallback = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+              () => resolve({ latitude, longitude }),
+              { enableHighAccuracy: true, timeout: 8000 }
+            );
+          });
+          targetLat = fallback.latitude;
+          targetLng = fallback.longitude;
+          setLatitude(targetLat);
+          setLongitude(targetLng);
+          setLocationMode('current');
+          setGpsAccuracy((prev) => prev ?? 20);
+        }
+
         setExifBadge({
           type: 'stamped',
-          text: `📍 Geotag Watermark Applied: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}°. (No camera EXIF found in photo; used map pin)`
+          text: `📍 Geotag Watermark Applied: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}°. (No camera EXIF found; ${locationMode === 'manual' ? 'kept user-selected map location' : 'used live/current location'})`
         });
       }
 
@@ -126,31 +180,13 @@ export default function FileComplaint({ setActivePage }) {
   };
 
   const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setErrorMsg('Geolocation is not supported by your browser. Please drag the pin on the map.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLatitude(pos.coords.latitude);
-        setLongitude(pos.coords.longitude);
-        setGpsAccuracy(Math.round(pos.coords.accuracy));
-        setLocating(false);
-        setErrorMsg('');
-      },
-      (err) => {
-        setLocating(false);
-        setErrorMsg('Location permission denied or unavailable. You can click on the map to pin your location.');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    requestCurrentLocation(false);
   };
 
   const handleMapClick = (lat, lng) => {
     setLatitude(lat);
     setLongitude(lng);
+    setLocationMode('manual');
   };
 
   const handleSubmit = async (e) => {

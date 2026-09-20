@@ -77,10 +77,17 @@ export default function FileComplaint({ setActivePage }) {
         detectedTime = exif.timestamp;
         setLatitude(targetLat);
         setLongitude(targetLng);
-        setExifBadge({
-          type: 'exif',
-          text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
-        });
+        if (exif.source === 'ocr') {
+          setExifBadge({
+            type: 'exif',
+            text: `🟢 GPS Camera Text Detected: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Auto-Pinned to Ward)`
+          });
+        } else {
+          setExifBadge({
+            type: 'exif',
+            text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
+          });
+        }
       } else {
         setExifBadge({
           type: 'stamped',

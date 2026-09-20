@@ -129,23 +129,82 @@ function readRationals(dataView, offset, isLittle, count) {
   return vals;
 }
 
-// Extracts EXIF GPS metadata from a browser File / Blob
+// Parse GPS coordinates from OCR text output (GPS Map Camera app overlays, etc.)
+function parseGpsFromOcrText(text) {
+  if (!text) return null;
+  // Match patterns like: "Lat 12.297886° Long 76.652196°"
+  // or "Latitude: 12.297886, Longitude: 76.652196"
+  // or "12.297886, 76.652196"
+  const latMatch = text.match(/Lat(?:itude)?[:\s°]*([0-9]{1,2}\.[0-9]{3,8})/i);
+  const lonMatch = text.match(/Lon(?:g|gitude)?[:\s°]*([0-9]{2,3}\.[0-9]{3,8})/i);
+  if (latMatch && lonMatch) {
+    const lat = parseFloat(latMatch[1]);
+    const lon = parseFloat(lonMatch[1]);
+    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return { latitude: lat, longitude: lon, timestamp: null, source: 'ocr' };
+    }
+  }
+  // Try matching pair of coordinates near each other
+  const pairMatch = text.match(/([1-9][0-9]{0,1}\.[0-9]{4,8})\s*°?\s*[,\s]+\s*([0-9]{2,3}\.[0-9]{4,8})/);
+  if (pairMatch) {
+    const lat = parseFloat(pairMatch[1]);
+    const lon = parseFloat(pairMatch[2]);
+    if (lat >= 5 && lat <= 35 && lon >= 65 && lon <= 95) { // rough India bounding box
+      return { latitude: lat, longitude: lon, timestamp: null, source: 'ocr' };
+    }
+  }
+  return null;
+}
+
+// OCR-based GPS extraction for GPS Map Camera app images (burns coords as visible text)
+async function extractGpsFromImageText(file) {
+  try {
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    const imageUrl = URL.createObjectURL(file);
+    const result = await worker.recognize(imageUrl);
+    await worker.terminate();
+    URL.revokeObjectURL(imageUrl);
+    return parseGpsFromOcrText(result.data.text);
+  } catch (err) {
+    console.warn('OCR GPS extraction failed:', err);
+    return null;
+  }
+}
+
+// Extracts EXIF GPS metadata from a browser File / Blob.
+// Falls back to OCR if no binary EXIF GPS is found (handles GPS Map Camera-style images).
 export async function extractExifGps(file) {
   if (!file) return null;
   const isJpg = (file.type && (file.type.toLowerCase().includes('jpeg') || file.type.toLowerCase().includes('jpg'))) ||
                 (file.name && (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')));
-  if (!isJpg) {
-    return null;
-  }
+  const isImage = isJpg || (file.type && file.type.startsWith('image/'));
+
+  if (!isImage) return null;
+
   try {
-    // Read up to 2MB to ensure all EXIF APP1 blocks & IFD pointers are covered without out-of-bounds errors
-    const sliceSize = Math.min(file.size, 2097152);
-    const arrayBuffer = await file.slice(0, sliceSize).arrayBuffer();
-    return parseExifGps(arrayBuffer);
+    // 1. First try binary EXIF parsing (fast, no network, works for camera apps that write proper EXIF)
+    if (isJpg) {
+      const sliceSize = Math.min(file.size, 2097152);
+      const arrayBuffer = await file.slice(0, sliceSize).arrayBuffer();
+      const exifResult = parseExifGps(arrayBuffer);
+      if (exifResult && exifResult.latitude && exifResult.longitude) {
+        return { ...exifResult, source: 'exif' };
+      }
+    }
+
+    // 2. Fall back to OCR text extraction (handles GPS Map Camera, CamScanner, etc. that burn
+    //    coordinates as visible text in the image rather than writing binary EXIF GPS tags)
+    console.log('No binary EXIF GPS found; trying OCR text extraction...');
+    const ocrResult = await extractGpsFromImageText(file);
+    if (ocrResult) {
+      console.log('OCR GPS extracted:', ocrResult);
+      return ocrResult;
+    }
   } catch (err) {
-    console.warn('Error reading file arrayBuffer for EXIF:', err);
-    return null;
+    console.warn('Error in extractExifGps:', err);
   }
+  return null;
 }
 
 // Stamps a high-visibility, professional Geotag Overlay onto an image file

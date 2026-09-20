@@ -32,6 +32,9 @@ class Complaint(db.Model):
     status = db.Column(db.String(30), default='SUBMITTED', index=True)
     # SUBMITTED, ASSIGNED, IN_PROGRESS, VERIFICATION_PENDING, RESOLVED, REOPENED, OVERDUE
 
+    report_count = db.Column(db.Integer, default=1)  # Increments when multiple citizens report same micro-location issue
+    merged_into_complaint_id = db.Column(db.Integer, db.ForeignKey('complaints.id'), nullable=True)
+
     sla_due_at = db.Column(db.DateTime, nullable=True)
     is_demo_data = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -71,6 +74,8 @@ class Complaint(db.Model):
             'priority_score': self.priority_score,
             'priority_reasons': self.priority_reasons or [],
             'status': self.status,
+            'report_count': self.report_count or 1,
+            'merged_into_complaint_id': self.merged_into_complaint_id,
             'sla_due_at': self.sla_due_at.isoformat() if self.sla_due_at else None,
             'is_demo_data': self.is_demo_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,

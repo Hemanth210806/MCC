@@ -16,6 +16,7 @@ import {
   Clock, 
   Building 
 } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
 
 export default function AdminDashboard({ initialTab = 'verification' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -164,7 +165,12 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                     <div>
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>{item.complaint_code}</span>
                       <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>{item.category_name}</h4>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Ward: <strong>{item.ward_name}</strong></div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Ward: <strong>{item.ward_name}</strong>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
+                        Submitted: <strong>{formatDateTime(item.submitted_at || item.created_at)}</strong>
+                      </div>
                     </div>
                     <span className="badge badge-VERIFICATION_PENDING">Pending Verification</span>
                   </div>

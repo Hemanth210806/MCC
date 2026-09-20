@@ -82,6 +82,58 @@ def get_ward_stats(ward_id):
         }
     }), 200
 
+@public_map_bp.route('/wards/<int:ward_id>/complaints', methods=['GET'])
+def get_ward_complaints(ward_id):
+    """
+    Returns complaints in a specific ward filtered by category:
+    - filter = 'all' (all posted complaints)
+    - filter = 'resolved'
+    - filter = 'overdue'
+    - filter = 'high_priority'
+    """
+    filter_type = request.args.get('filter', 'all').lower()
+    from datetime import datetime
+
+    query = Complaint.query.filter_by(ward_id=ward_id)
+
+    if filter_type == 'resolved':
+        query = query.filter_by(status='RESOLVED')
+    elif filter_type == 'overdue':
+        now = datetime.utcnow()
+        query = query.filter(Complaint.status.notin_(['RESOLVED', 'REJECTED']), Complaint.sla_due_at < now)
+    elif filter_type == 'high_priority':
+        query = query.filter(Complaint.priority == 'HIGH')
+    else:  # 'all'
+        query = query.filter(Complaint.status != 'REJECTED')
+
+    complaints = query.order_by(Complaint.created_at.desc()).all()
+    results = []
+    for c in complaints:
+        data = c.to_dict(include_sensitive=False)
+        results.append(data)
+
+    return jsonify({
+        'ward_id': ward_id,
+        'filter': filter_type,
+        'count': len(results),
+        'complaints': results
+    }), 200
+
+@public_map_bp.route('/wards/lookup', methods=['GET'])
+def lookup_ward_by_coords():
+    """
+    Live reverse lookup for frontend UI. Checks if lat/lng is within MCC wards.
+    """
+    try:
+        lat = float(request.args.get('lat', 0))
+        lng = float(request.args.get('lng', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid coordinates provided'}), 400
+
+    res = ward_lookup_service.lookup(lat, lng)
+    return jsonify(res), 200
+
+
 @public_map_bp.route('/seed', methods=['GET', 'POST'])
 def run_seed():
     try:

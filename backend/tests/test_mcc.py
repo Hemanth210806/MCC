@@ -56,6 +56,10 @@ def app():
         school = ImportantLocation(name="Demonstration School", type="school", latitude=12.3082, longitude=76.6215)
         db.session.add_all([hosp, school])
 
+        # Seed Ward for GIS lookup testing
+        ward62 = Ward(ward_number=62, ward_name="Vishweshwara Nagara", geometry={"type": "Polygon", "coordinates": []})
+        db.session.add(ward62)
+
         # Users
         admin = User(name="Test Admin", email="admin.test@mcc.gov.in", role="admin")
         admin.set_password("Pass@123")
@@ -229,3 +233,54 @@ def test_file_complaint_api(client, app):
     assert json_data['category_name'] is not None
     assert json_data['priority'] in ('LOW', 'MEDIUM', 'HIGH')
     assert len(json_data['priority_reasons']) > 0
+
+    # 9. Micro-Proximity Auto-Merge Test (< 20m)
+    img2 = io.BytesIO()
+    Image.new('RGB', (100, 100), color='blue').save(img2, format='JPEG')
+    img2.seek(0)
+    data2 = {
+        'photo': (img2, 'angle2.jpg'),
+        'latitude': '12.27855', # ~6 meters away
+        'longitude': '76.6520',
+        'citizen_phone': '9845099999',
+        'description': 'Same garbage pile different angle'
+    }
+    res2 = client.post('/api/complaints', data=data2, content_type='multipart/form-data')
+    assert res2.status_code == 200
+    json_data2 = res2.get_json()
+    assert json_data2['merged'] is True
+    assert json_data2['report_count'] == 2
+    assert json_data2['complaint_code'] == json_data['complaint_code']
+
+    # 10. Third Report Auto-Escalation to HIGH
+    img3 = io.BytesIO()
+    Image.new('RGB', (100, 100), color='green').save(img3, format='JPEG')
+    img3.seek(0)
+    data3 = {
+        'photo': (img3, 'angle3.jpg'),
+        'latitude': '12.27858', # ~9 meters away
+        'longitude': '76.6520',
+        'citizen_phone': '9845088888',
+        'description': 'Third citizen reporting this exact issue'
+    }
+    res3 = client.post('/api/complaints', data=data3, content_type='multipart/form-data')
+    assert res3.status_code == 200
+    json_data3 = res3.get_json()
+    assert json_data3['merged'] is True
+    assert json_data3['report_count'] == 3
+    assert json_data3['priority'] == 'HIGH'
+
+    # 11. Strict Outside MCC Boundary Rejection Test
+    img4 = io.BytesIO()
+    Image.new('RGB', (100, 100), color='black').save(img4, format='JPEG')
+    img4.seek(0)
+    data_outside = {
+        'photo': (img4, 'outside.jpg'),
+        'latitude': '13.0827', # Chennai coordinates outside Mysuru
+        'longitude': '80.2707',
+        'citizen_phone': '9845011111'
+    }
+    res_out = client.post('/api/complaints', data=data_outside, content_type='multipart/form-data')
+    assert res_out.status_code == 400
+    assert 'outside_mcc_boundary' in res_out.get_json()
+    assert res_out.get_json()['outside_mcc_boundary'] is True

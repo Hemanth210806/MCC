@@ -2,6 +2,7 @@ import React from 'react';
 import PriorityBadge from './PriorityBadge';
 import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { MapPin, Calendar, Building, Clock, ArrowRight } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
 
 export default function ComplaintCard({ complaint, onSelect, actionLabel = 'View Details' }) {
   const photoUrl = complaint.images && complaint.images.length > 0 
@@ -60,15 +61,21 @@ export default function ComplaintCard({ complaint, onSelect, actionLabel = 'View
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Calendar size={14} />
-          <span>{complaint.created_at ? new Date(complaint.created_at).toLocaleDateString() : ''}</span>
+          <span>{formatDateTime(complaint.created_at)}</span>
         </div>
         {complaint.sla_due_at && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: complaint.status === 'OVERDUE' ? '#e11d48' : '#64748b' }}>
             <Clock size={14} />
-            <span>SLA: {new Date(complaint.sla_due_at).toLocaleDateString()}</span>
+            <span>SLA: {formatDateTime(complaint.sla_due_at)}</span>
           </div>
         )}
       </div>
+
+      {complaint.report_count && complaint.report_count > 1 && (
+        <div style={{ fontSize: '0.72rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>
+          🔥 Cluster: {complaint.report_count} citizen reports merged at this spot
+        </div>
+      )}
 
       {onSelect && (
         <button 

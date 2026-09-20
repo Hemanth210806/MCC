@@ -3,7 +3,8 @@ import StatusTimeline from '../components/StatusTimeline';
 import PriorityBadge from '../components/PriorityBadge';
 import api from '../services/api';
 import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
-import { Search, MapPin, Building, Calendar, Star, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
+import { Search, MapPin, Building, Calendar, Star, CheckCircle, AlertCircle, Clock, Layers, Sparkles } from 'lucide-react';
 
 export default function TrackComplaint() {
   const [code, setCode] = useState('');
@@ -125,6 +126,9 @@ export default function TrackComplaint() {
                 <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, marginTop: '2px' }}>
                   {complaint.category_name}
                 </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
+                  Reported: <strong>{formatDateTime(complaint.created_at)}</strong>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -132,6 +136,26 @@ export default function TrackComplaint() {
                 <span className={`badge badge-${complaint.status}`}>{complaint.status.replace('_', ' ')}</span>
               </div>
             </div>
+
+            {/* Micro-Cluster Auto-Merge Banner */}
+            {complaint.report_count && complaint.report_count > 1 && (
+              <div style={{
+                marginTop: '16px',
+                padding: '12px 16px',
+                backgroundColor: '#fef3c7',
+                border: '1px solid #fde68a',
+                borderRadius: '8px',
+                color: '#92400e',
+                fontSize: '0.85rem'
+              }}>
+                <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={16} /> Micro-Proximity Grievance Cluster ({complaint.report_count} Reports)
+                </div>
+                <div style={{ marginTop: '2px' }}>
+                  This issue was reported by {complaint.report_count} citizens within 20m of this location. The MCC engine combined these reports to expedite municipal routing.
+                </div>
+              </div>
+            )}
 
             {/* Stepper Timeline */}
             <StatusTimeline currentStatus={complaint.status} timeline={complaint.timeline || []} />
@@ -149,7 +173,7 @@ export default function TrackComplaint() {
               <div>
                 <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>SLA RESOLUTION DUE</span>
                 <strong style={{ color: complaint.status === 'OVERDUE' ? '#dc2626' : '#0f172a' }}>
-                  {complaint.sla_due_at ? new Date(complaint.sla_due_at).toLocaleString() : 'N/A'}
+                  {formatDateTime(complaint.sla_due_at)}
                 </strong>
               </div>
               <div>
@@ -166,7 +190,7 @@ export default function TrackComplaint() {
             )}
           </div>
 
-          {/* Side-by-Side Photos (Original vs Resolution) */}
+          {/* Photographic Evidence */}
           <div className="card">
             <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>
               Photographic Evidence
@@ -227,6 +251,26 @@ export default function TrackComplaint() {
                 )}
               </div>
             </div>
+
+            {/* Additional Angles Gallery from Merged Complaints */}
+            {complaint.images && complaint.images.length > 1 && (
+              <div style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '10px' }}>
+                  Alternative Angles from Merged Citizen Reports ({complaint.images.length - 1}):
+                </div>
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
+                  {complaint.images.slice(1).map((img, idx) => (
+                    <div key={idx} style={{ width: '110px', height: '85px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: '#e2e8f0' }}>
+                      <img 
+                        src={getImageUrl(img.image_path, complaint.category_name, false)} 
+                        alt={`Angle ${idx + 2}`} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Feedback Section (if Resolved) */}

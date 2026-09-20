@@ -56,8 +56,8 @@ class WardLookupService:
         """
         point = Point(longitude, latitude)
 
+        # 1. Exact point-in-polygon match
         for w in self._wards:
-            # point.within(w['geometry']) or w['geometry'].contains(point)
             if w['geometry'].contains(point) or w['geometry'].touches(point):
                 return {
                     "outside_mcc_boundary": False,
@@ -65,6 +65,28 @@ class WardLookupService:
                     "ward_name": w['ward_name'],
                     "ward_id": w['ward_id']
                 }
+
+        # 2. Road centerline / boundary sliver tolerance:
+        # GPS points taken on municipal streets, intersections, or sidewalks separating
+        # adjacent wards can fall into slight 1-50m digitization sliver gaps between polygons.
+        # Allow up to 0.003 degrees (~330 meters) buffer to snap to the nearest MCC ward.
+        TOLERANCE_DEG = 0.003
+        min_dist = float('inf')
+        closest_ward = None
+
+        for w in self._wards:
+            d = w['geometry'].distance(point)
+            if d < min_dist:
+                min_dist = d
+                closest_ward = w
+
+        if closest_ward and min_dist <= TOLERANCE_DEG:
+            return {
+                "outside_mcc_boundary": False,
+                "ward_number": closest_ward['ward_number'],
+                "ward_name": closest_ward['ward_name'],
+                "ward_id": closest_ward['ward_id']
+            }
 
         return {
             "outside_mcc_boundary": True,

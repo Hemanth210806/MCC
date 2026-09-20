@@ -56,9 +56,10 @@ def app():
         school = ImportantLocation(name="Demonstration School", type="school", latitude=12.3082, longitude=76.6215)
         db.session.add_all([hosp, school])
 
-        # Seed Ward for GIS lookup testing
-        ward62 = Ward(ward_number=62, ward_name="Vishweshwara Nagara", geometry={"type": "Polygon", "coordinates": []})
-        db.session.add(ward62)
+        # Seed Wards for GIS lookup testing
+        ward61 = Ward(ward_number=61, ward_name="Vidyaranyapuram", geometry={"type": "Polygon", "coordinates": []})
+        ward62 = Ward(ward_number=62, ward_name="Vishweshwaranagara", geometry={"type": "Polygon", "coordinates": []})
+        db.session.add_all([ward61, ward62])
 
         # Users
         admin = User(name="Test Admin", email="admin.test@mcc.gov.in", role="admin")

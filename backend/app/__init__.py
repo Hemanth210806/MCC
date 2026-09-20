@@ -35,6 +35,35 @@ def create_app(config_name='development'):
         except Exception as e:
             app.logger.info(f"Schema check note: {e}")
 
+        # Synchronize official 65 MCC wards in database
+        try:
+            from app.models.ward import Ward
+            import json
+            wards_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'data', 'mysuru_wards.geojson')
+            if os.path.exists(wards_file):
+                with open(wards_file, 'r', encoding='utf-8') as f:
+                    wdata = json.load(f)
+                synced_count = 0
+                for feat in wdata.get('features', []):
+                    p = feat['properties']
+                    wno = p['ward_number']
+                    wname = p['ward_name']
+                    wobj = Ward.query.filter_by(ward_number=wno).first()
+                    if wobj:
+                        if wobj.ward_name != wname or wobj.geometry != feat['geometry']:
+                            wobj.ward_name = wname
+                            wobj.geometry = feat['geometry']
+                            synced_count += 1
+                    else:
+                        new_ward = Ward(ward_number=wno, ward_name=wname, geometry=feat['geometry'])
+                        db.session.add(new_ward)
+                        synced_count += 1
+                if synced_count > 0:
+                    db.session.commit()
+                    app.logger.info(f"Synchronized {synced_count} official MCC wards in database.")
+        except Exception as e:
+            app.logger.info(f"Ward sync note: {e}")
+
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')
     os.makedirs(upload_dir, exist_ok=True)

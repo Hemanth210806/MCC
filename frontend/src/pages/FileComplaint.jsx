@@ -79,12 +79,12 @@ export default function FileComplaint({ setActivePage }) {
         setLongitude(targetLng);
         setExifBadge({
           type: 'exif',
-          text: `Geotag auto-extracted from photo: Lat ${targetLat.toFixed(4)}°, Lng ${targetLng.toFixed(4)}°`
+          text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
         });
       } else {
         setExifBadge({
           type: 'stamped',
-          text: `Live MCC Geotag & Time stamped onto photo`
+          text: `📍 Geotag Watermark Applied: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}°. (No camera EXIF found in photo; used map pin)`
         });
       }
 

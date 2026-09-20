@@ -385,7 +385,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                       </span>
                     </td>
                     <td style={{ padding: '10px', color: '#64748b' }}>
-                      {new Date(r.detected_at).toLocaleDateString()}
+                      {formatDateTime(r.detected_at)}
                     </td>
                   </tr>
                 ))}

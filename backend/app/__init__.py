@@ -11,6 +11,30 @@ def create_app(config_name='development'):
     db.init_app(app)
     cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
+    # Automatic schema migration for new columns
+    with app.app_context():
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                res = conn.execute(text("PRAGMA table_info(complaints)")).fetchall()
+                existing_cols = [r[1] for r in res] if res else []
+                if existing_cols:
+                    if 'report_count' not in existing_cols:
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN report_count INTEGER DEFAULT 1"))
+                        conn.commit()
+                    if 'merged_into_complaint_id' not in existing_cols:
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN merged_into_complaint_id INTEGER NULL"))
+                        conn.commit()
+                else:
+                    try:
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS report_count INTEGER DEFAULT 1"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS merged_into_complaint_id INTEGER NULL"))
+                        conn.commit()
+                    except Exception:
+                        pass
+        except Exception as e:
+            app.logger.info(f"Schema check note: {e}")
+
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')
     os.makedirs(upload_dir, exist_ok=True)

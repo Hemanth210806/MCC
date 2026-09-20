@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ComplaintCard from '../components/ComplaintCard';
 import api from '../services/api';
-import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter } from 'lucide-react';
+import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter, Calendar } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
 
 export default function OfficerDashboard() {
   const { user } = useAuth();
@@ -211,6 +212,19 @@ export default function OfficerDashboard() {
                 {modalMsg}
               </div>
             )}
+
+            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: '#64748b' }}>📅 <strong>Registered Date & Time:</strong></span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{formatDateTime(selectedComplaint.created_at)}</span>
+              </div>
+              {selectedComplaint.sla_due_at && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: selectedComplaint.status === 'OVERDUE' ? '#dc2626' : '#64748b' }}>⏰ <strong>SLA Target Deadline:</strong></span>
+                  <span style={{ fontWeight: 700, color: selectedComplaint.status === 'OVERDUE' ? '#dc2626' : '#0369a1' }}>{formatDateTime(selectedComplaint.sla_due_at)}</span>
+                </div>
+              )}
+            </div>
 
             <form onSubmit={handleResolveSubmit}>
               {/* Photo Input */}

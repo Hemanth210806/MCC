@@ -27,6 +27,7 @@ export default function MapView({
   onMarkerDragEnd = null,
   onMapClick = null,
   onWardSelect = null,
+  selectedWardNumber = null,
   height = '500px'
 }) {
   const mapContainerRef = useRef(null);
@@ -126,6 +127,25 @@ export default function MapView({
 
     geojsonLayerRef.current = layer;
   }, [wardGeoJson]);
+
+  // Zoom to selected ward when changed via dropdown
+  useEffect(() => {
+    if (!mapRef.current || !geojsonLayerRef.current || !selectedWardNumber) return;
+    try {
+      geojsonLayerRef.current.eachLayer((layer) => {
+        if (layer.feature && String(layer.feature.properties?.ward_number) === String(selectedWardNumber)) {
+          if (layer.getBounds) {
+            mapRef.current.fitBounds(layer.getBounds(), { padding: [60, 60], maxZoom: 15 });
+          }
+          if (layer.openPopup) {
+            layer.openPopup();
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Error zooming to ward:', e);
+    }
+  }, [selectedWardNumber]);
 
   // Update Hotspots Layer
   useEffect(() => {

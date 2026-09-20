@@ -32,6 +32,14 @@ export default function PublicMap() {
     loadMapData();
   }, []);
 
+  const allWardsList = React.useMemo(() => {
+    if (!mapData?.wards_geojson?.features) return [];
+    const list = mapData.wards_geojson.features
+      .map(f => f.properties)
+      .filter(p => p && p.ward_number);
+    return list.sort((a, b) => Number(a.ward_number) - Number(b.ward_number));
+  }, [mapData]);
+
   // Fetch complaints when filter or ward changes
   const handleOpenFilter = async (filterType, wardProps) => {
     const ward = wardProps || selectedWard;
@@ -72,36 +80,81 @@ export default function PublicMap() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        zIndex: 20
+        zIndex: 20,
+        flexWrap: 'wrap',
+        gap: '12px'
       }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
             Mysuru Municipal Ward Map & Civic Health Monitor
           </h2>
           <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-            Click on any of the 65 official MCC wards to view metrics, or click any statistic badge to drill down into complaints.
+            Select any ward from the dropdown or click a polygon on the map to inspect civic metrics and drill down into complaints.
           </div>
         </div>
 
-        {/* Legend and Toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
-            <input 
-              type="checkbox" 
-              checked={showHotspots} 
-              onChange={(e) => setShowHotspots(e.target.checked)} 
-            />
-            <span style={{ color: '#dc2626', fontWeight: 600 }}>🔥 Hotspots</span>
-          </label>
+        {/* Ward Selector Dropdown & Toggles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a8a' }}>Select Ward:</span>
+            <select
+              id="map-ward-dropdown"
+              value={selectedWard?.ward_number || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  setSelectedWard(null);
+                  setActiveFilter(null);
+                  return;
+                }
+                const found = allWardsList.find(w => String(w.ward_number) === String(val));
+                if (found) {
+                  setSelectedWard(found);
+                  setActiveFilter(null);
+                }
+              }}
+              style={{
+                padding: '7px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid #0284c7',
+                backgroundColor: '#f0f9ff',
+                color: '#0369a1',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: '220px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
+            >
+              <option value="">-- Jump to Ward (All 65) --</option>
+              {allWardsList.map((w) => (
+                <option key={w.ward_number} value={w.ward_number}>
+                  Ward {w.ward_number}: {w.ward_name} ({w.rating || 'HEALTHY'})
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
-            <input 
-              type="checkbox" 
-              checked={showComplaints} 
-              onChange={(e) => setShowComplaints(e.target.checked)} 
-            />
-            <span style={{ color: '#2563eb', fontWeight: 600 }}>📍 Complaint Pins</span>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={showHotspots} 
+                onChange={(e) => setShowHotspots(e.target.checked)} 
+              />
+              <span style={{ color: '#dc2626', fontWeight: 600 }}>🔥 Hotspots</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={showComplaints} 
+                onChange={(e) => setShowComplaints(e.target.checked)} 
+              />
+              <span style={{ color: '#2563eb', fontWeight: 600 }}>📍 Complaint Pins</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -120,6 +173,7 @@ export default function PublicMap() {
             wardGeoJson={mapData?.wards_geojson}
             hotspots={showHotspots ? (mapData?.hotspots || []) : []}
             complaints={showComplaints ? (mapData?.complaint_markers || []) : []}
+            selectedWardNumber={selectedWard?.ward_number}
             onWardSelect={(wardProps) => {
               setSelectedWard(wardProps);
               setActiveFilter(null);
@@ -173,8 +227,30 @@ export default function PublicMap() {
               </div>
             </div>
 
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-              CLICK ANY STATISTIC TO VIEW COMPLAINTS:
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                CLICK STATISTIC OR CHOOSE:
+              </div>
+              <select
+                value={activeFilter || ''}
+                onChange={(e) => e.target.value ? handleOpenFilter(e.target.value) : setActiveFilter(null)}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #94a3b8',
+                  color: '#0f172a',
+                  fontWeight: 700,
+                  backgroundColor: '#f8fafc',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">Filter List...</option>
+                <option value="all">All Reports ({selectedWard.total_complaints || 0})</option>
+                <option value="resolved">Resolved ({selectedWard.resolved_count || 0})</option>
+                <option value="overdue">Overdue ({selectedWard.overdue_count || 0})</option>
+                <option value="high_priority">High Priority ({selectedWard.high_priority_pending || 0})</option>
+              </select>
             </div>
 
             {/* Interactive 4 Metric Badges */}

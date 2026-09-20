@@ -109,16 +109,18 @@ function parseExifBlock(dataView, start) {
 
 function readAscii(dataView, offset, length) {
   let str = '';
+  if (offset + length > dataView.byteLength) length = Math.max(0, dataView.byteLength - offset);
   for (let i = 0; i < length; i++) {
     const code = dataView.getUint8(offset + i);
     if (code === 0) break;
     str += String.fromCharCode(code);
   }
-  return str;
+  return str.trim();
 }
 
 function readRationals(dataView, offset, isLittle, count) {
   const vals = [];
+  if (offset + count * 8 > dataView.byteLength) return null;
   for (let i = 0; i < count; i++) {
     const num = dataView.getUint32(offset + i * 8, isLittle);
     const den = dataView.getUint32(offset + i * 8 + 4, isLittle);
@@ -129,11 +131,16 @@ function readRationals(dataView, offset, isLittle, count) {
 
 // Extracts EXIF GPS metadata from a browser File / Blob
 export async function extractExifGps(file) {
-  if (!file || !file.type.includes('jpeg') && !file.type.includes('jpg')) {
+  if (!file) return null;
+  const isJpg = (file.type && (file.type.toLowerCase().includes('jpeg') || file.type.toLowerCase().includes('jpg'))) ||
+                (file.name && (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')));
+  if (!isJpg) {
     return null;
   }
   try {
-    const arrayBuffer = await file.slice(0, 131072).arrayBuffer(); // First 128KB is plenty for EXIF
+    // Read up to 2MB to ensure all EXIF APP1 blocks & IFD pointers are covered without out-of-bounds errors
+    const sliceSize = Math.min(file.size, 2097152);
+    const arrayBuffer = await file.slice(0, sliceSize).arrayBuffer();
     return parseExifGps(arrayBuffer);
   } catch (err) {
     console.warn('Error reading file arrayBuffer for EXIF:', err);

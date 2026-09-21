@@ -238,34 +238,44 @@ export default function MapView({
     markersLayerRef.current = group;
   }, [complaints]);
 
+  const onMarkerDragEndRef = useRef(onMarkerDragEnd);
+  useEffect(() => {
+    onMarkerDragEndRef.current = onMarkerDragEnd;
+  }, [onMarkerDragEnd]);
+
   // Draggable Pin for Complaint Filing
   useEffect(() => {
     if (!mapRef.current) return;
 
     if (draggableMarker && draggableMarker.lat && draggableMarker.lng) {
       if (pinMarkerRef.current) {
-        pinMarkerRef.current.setLatLng([draggableMarker.lat, draggableMarker.lng]);
+        const currentPos = pinMarkerRef.current.getLatLng();
+        // Only update marker position if coordinates actually changed by more than ~1 meter
+        const dist = Math.abs(currentPos.lat - draggableMarker.lat) + Math.abs(currentPos.lng - draggableMarker.lng);
+        if (dist > 0.00001) {
+          pinMarkerRef.current.setLatLng([draggableMarker.lat, draggableMarker.lng]);
+        }
       } else {
         const marker = L.marker([draggableMarker.lat, draggableMarker.lng], {
-          draggable: true
+          draggable: true,
+          autoPan: true
         }).addTo(mapRef.current);
 
         marker.on('dragend', function (e) {
           const latlng = e.target.getLatLng();
-          if (onMarkerDragEnd) {
-            onMarkerDragEnd(latlng.lat, latlng.lng);
+          if (onMarkerDragEndRef.current) {
+            onMarkerDragEndRef.current(latlng.lat, latlng.lng);
           }
         });
 
         marker.bindPopup('<b>Drag to fine-tune exact issue location</b>').openPopup();
         pinMarkerRef.current = marker;
       }
-      mapRef.current.panTo([draggableMarker.lat, draggableMarker.lng]);
     } else if (pinMarkerRef.current) {
       mapRef.current.removeLayer(pinMarkerRef.current);
       pinMarkerRef.current = null;
     }
-  }, [draggableMarker]);
+  }, [draggableMarker?.lat, draggableMarker?.lng]);
 
   return (
     <div style={{ height, width: '100%', position: 'relative', overflow: 'hidden' }}>

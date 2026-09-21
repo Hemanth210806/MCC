@@ -30,6 +30,8 @@ export default function FileComplaint({ setActivePage }) {
   // Wards GeoJSON for map display
   const [wardGeoJson, setWardGeoJson] = useState(null);
 
+  const isManualLocationRef = React.useRef(false);
+
   const fetchWardForPoint = async (lat, lng) => {
     try {
       const res = await api.get(`/public/wards/lookup?lat=${lat}&lng=${lng}`);
@@ -42,6 +44,19 @@ export default function FileComplaint({ setActivePage }) {
     }
   };
 
+  const handleManualLocationChange = (lat, lng) => {
+    isManualLocationRef.current = true;
+    setLatitude(lat);
+    setLongitude(lng);
+    setLocationMode('manual');
+    setGpsAccuracy(null);
+    setExifBadge({
+      type: 'manual',
+      text: `📍 Location Pinned: Lat ${lat.toFixed(5)}°, Lng ${lng.toFixed(5)}° (Custom Map Pin)`
+    });
+    fetchWardForPoint(lat, lng);
+  };
+
   const requestCurrentLocation = (silent = false) => {
     if (!navigator.geolocation) {
       if (!silent) {
@@ -50,9 +65,19 @@ export default function FileComplaint({ setActivePage }) {
       return;
     }
 
+    if (!silent) {
+      isManualLocationRef.current = false;
+    }
+
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        // If this was a silent background call and user has already manually chosen a location, do not override
+        if (silent && isManualLocationRef.current) {
+          setLocating(false);
+          return;
+        }
+
         const nextLat = pos.coords.latitude;
         const nextLng = pos.coords.longitude;
         setLatitude(nextLat);
@@ -107,7 +132,8 @@ export default function FileComplaint({ setActivePage }) {
       let targetLng = longitude;
       let detectedTime = null;
 
-      if (exif && exif.latitude && exif.longitude) {
+      // Only auto-extract EXIF GPS if user hasn't explicitly set a custom map pin
+      if (exif && exif.latitude && exif.longitude && !isManualLocationRef.current) {
         targetLat = exif.latitude;
         targetLng = exif.longitude;
         detectedTime = exif.timestamp;
@@ -126,26 +152,12 @@ export default function FileComplaint({ setActivePage }) {
           });
         }
       } else {
-        const currentLocationAvailable = navigator.geolocation;
-        if (currentLocationAvailable && locationMode !== 'manual') {
-          const fallback = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-              () => resolve({ latitude, longitude }),
-              { enableHighAccuracy: true, timeout: 8000 }
-            );
-          });
-          targetLat = fallback.latitude;
-          targetLng = fallback.longitude;
-          setLatitude(targetLat);
-          setLongitude(targetLng);
-          setLocationMode('current');
-          setGpsAccuracy((prev) => prev ?? 20);
-        }
-
+        // Respect the user's selected/dragged location!
+        targetLat = latitude;
+        targetLng = longitude;
         setExifBadge({
-          type: 'stamped',
-          text: `📍 Geotag Watermark Applied: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}°. (No camera EXIF found; ${locationMode === 'manual' ? 'kept user-selected map location' : 'used live/current location'})`
+          type: isManualLocationRef.current ? 'manual' : 'stamped',
+          text: `📍 Location Applied: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (${isManualLocationRef.current ? 'Custom Map Pin' : 'Current Location'})`
         });
       }
 
@@ -181,12 +193,6 @@ export default function FileComplaint({ setActivePage }) {
 
   const handleGetCurrentLocation = () => {
     requestCurrentLocation(false);
-  };
-
-  const handleMapClick = (lat, lng) => {
-    setLatitude(lat);
-    setLongitude(lng);
-    setLocationMode('manual');
   };
 
   const handleSubmit = async (e) => {
@@ -559,8 +565,8 @@ export default function FileComplaint({ setActivePage }) {
               zoom={14}
               wardGeoJson={wardGeoJson}
               draggableMarker={{ lat: latitude, lng: longitude }}
-              onMarkerDragEnd={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
-              onMapClick={handleMapClick}
+              onMarkerDragEnd={handleManualLocationChange}
+              onMapClick={handleManualLocationChange}
             />
           </div>
 
@@ -605,9 +611,16 @@ export default function FileComplaint({ setActivePage }) {
             </div>
           ) : null}
 
-          <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-            <span>Lat: <strong>{latitude.toFixed(5)}</strong>, Lng: <strong>{longitude.toFixed(5)}</strong></span>
-            {gpsAccuracy && <span>GPS Accuracy: ±{gpsAccuracy}m</span>}
+          <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>
+              Lat: <strong>{latitude.toFixed(5)}</strong>, Lng: <strong>{longitude.toFixed(5)}</strong>
+              {locationMode === 'manual' && (
+                <span style={{ marginLeft: '8px', color: '#2563eb', fontWeight: 600, backgroundColor: '#eff6ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                  📌 Custom Pin
+                </span>
+              )}
+            </span>
+            {locationMode === 'current' && gpsAccuracy && <span>GPS Accuracy: ±{gpsAccuracy}m</span>}
           </div>
           <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
             Tip: Drag the pin or click on the map to set the exact spot.

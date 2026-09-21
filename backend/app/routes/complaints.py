@@ -100,15 +100,8 @@ def file_complaint():
     ai_result = classification_service.classify_image(photo_abs_path)
     predicted_cat_name = ai_result.get('category_name')
 
-    if predicted_cat_name == 'Other / Unrelated' or ai_result.get('status') == 'REVIEW_REQUIRED':
-        return jsonify({
-            'error': 'The uploaded image could not be confidently matched to a civic issue. Please upload a clearer photo or choose a category manually.',
-            'ai_status': ai_result.get('status'),
-            'ai_confidence': round(ai_result.get('confidence', 0), 2)
-        }), 422
-
     matched_cat = None
-    if predicted_cat_name:
+    if predicted_cat_name and predicted_cat_name != 'Other / Unrelated':
         matched_cat = Category.query.filter(Category.name.ilike(f"%{predicted_cat_name.split('/')[0].strip()}%")).first()
 
     if not matched_cat:

@@ -119,10 +119,16 @@ export default function FileComplaint({ setActivePage }) {
   }, [latitude, longitude]);
 
   const handlePhotoChange = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset input so re-selecting the same file triggers onChange
+    e.target.value = '';
+
     setErrorMsg('');
+    // Instant preview so user immediately sees their photo was accepted
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
     setIsStamping(true);
 
     try {
@@ -140,17 +146,10 @@ export default function FileComplaint({ setActivePage }) {
         setLatitude(targetLat);
         setLongitude(targetLng);
         setLocationMode('exif');
-        if (exif.source === 'ocr') {
-          setExifBadge({
-            type: 'exif',
-            text: `🟢 GPS Camera Text Detected: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Auto-Pinned to Ward)`
-          });
-        } else {
-          setExifBadge({
-            type: 'exif',
-            text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
-          });
-        }
+        setExifBadge({
+          type: 'exif',
+          text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
+        });
       } else {
         // Respect the user's selected/dragged location!
         targetLat = latitude;
@@ -180,12 +179,12 @@ export default function FileComplaint({ setActivePage }) {
         timestamp: detectedTime
       });
 
-      setPhoto(stampedFile);
-      setPhotoPreview(URL.createObjectURL(stampedFile));
+      if (stampedFile) {
+        setPhoto(stampedFile);
+        setPhotoPreview(URL.createObjectURL(stampedFile));
+      }
     } catch (err) {
       console.error('Photo processing error:', err);
-      setPhoto(file);
-      setPhotoPreview(URL.createObjectURL(file));
     } finally {
       setIsStamping(false);
     }
@@ -193,6 +192,10 @@ export default function FileComplaint({ setActivePage }) {
 
   const handleGetCurrentLocation = () => {
     requestCurrentLocation(false);
+  };
+
+  const handleResetToMysuru = () => {
+    handleManualLocationChange(12.3051, 76.6551);
   };
 
   const handleSubmit = async (e) => {
@@ -203,7 +206,7 @@ export default function FileComplaint({ setActivePage }) {
     }
 
     if (isOutsideMcc) {
-      setErrorMsg('Selected location is outside Mysuru City Corporation (MCC) ward boundaries. Complaints can only be filed within Mysuru municipal wards.');
+      setErrorMsg('Selected location is outside Mysuru City Corporation (MCC) ward boundaries. Please drag the pin on the map into Mysuru.');
       return;
     }
 
@@ -226,7 +229,14 @@ export default function FileComplaint({ setActivePage }) {
       });
       setSuccessResult(res.data);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Submission failed. Please check inputs and try again.');
+      const serverMsg = err.response?.data?.error || err.response?.data?.message;
+      if (serverMsg) {
+        setErrorMsg(serverMsg);
+      } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setErrorMsg('Submission timed out. Please try again.');
+      } else {
+        setErrorMsg('Submission failed. Please check inputs and try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -582,13 +592,25 @@ export default function FileComplaint({ setActivePage }) {
               fontSize: '0.82rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              justifyContent: 'space-between',
+              gap: '8px',
+              flexWrap: 'wrap'
             }}>
-              <ShieldAlert size={20} style={{ flexShrink: 0 }} />
-              <div>
-                <strong>Location is outside Mysuru City Corporation (MCC) ward boundaries!</strong>
-                <div>Complaints can only be filed within Mysuru municipal wards. Please drag the pin inside city limits.</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldAlert size={20} style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>Location is outside Mysuru City Corporation (MCC) boundaries!</strong>
+                  <div>Complaints can only be filed within Mysuru municipal wards.</div>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={handleResetToMysuru}
+                className="btn btn-primary"
+                style={{ padding: '4px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+              >
+                📍 Pin to Mysuru Ward
+              </button>
             </div>
           ) : wardInfo && wardInfo.ward_name ? (
             <div style={{

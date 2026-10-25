@@ -20,6 +20,12 @@ from app.utils.exif_reader import extract_exif_gps
 
 complaints_bp = Blueprint('complaints', __name__, url_prefix='/api/complaints')
 
+AI_CATEGORY_TO_DB_NAME = {
+    'Garbage_Waste': 'Garbage / Waste',
+    'Pothole': 'Pothole / Road Damage',
+    'Streetlight': 'Streetlight Failure',
+}
+
 @complaints_bp.route('', methods=['POST'])
 def file_complaint():
     """
@@ -50,11 +56,15 @@ def file_complaint():
     latitude = None
     longitude = None
 
-    # Check form coordinates first, or fallback to photo's embedded EXIF GPS
+    # Check form coordinates first, but let EXIF override when the uploaded photo is the source of truth.
     form_lat = request.form.get('latitude')
     form_lng = request.form.get('longitude')
+    location_source = request.form.get('location_source', 'current')
 
-    if form_lat and form_lng:
+    if location_source == 'exif' and exif_data.get('has_gps'):
+        latitude = exif_data['latitude']
+        longitude = exif_data['longitude']
+    elif form_lat and form_lng:
         try:
             latitude = float(form_lat)
             longitude = float(form_lng)
@@ -101,26 +111,43 @@ def file_complaint():
     predicted_cat_name = ai_result.get('category_name')
 
     matched_cat = None
-    if predicted_cat_name and predicted_cat_name != 'Other / Unrelated':
-        matched_cat = Category.query.filter(Category.name.ilike(f"%{predicted_cat_name.split('/')[0].strip()}%")).first()
+    if predicted_cat_name:
+        db_lookup_name = AI_CATEGORY_TO_DB_NAME.get(predicted_cat_name, predicted_cat_name)
+        matched_cat = Category.query.filter(
+            Category.name.ilike(f"%{db_lookup_name.split('/')[0].strip()}%") |
+            Category.name.ilike(f"%{predicted_cat_name}%")
+        ).first()
 
     if not matched_cat:
         matched_cat = Category.query.first()
 
     # 4. Micro-Proximity Duplicate Check & Auto-Merge (< 20 meters)
-    # Check open complaints in the same category within 20m
+    # If the same place is reported again, keep the current valid issue category and
+    # update the existing complaint record so stale wrong categories are corrected.
     open_statuses = ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED']
     existing_open = Complaint.query.filter(
-        Complaint.category_id == matched_cat.id,
         Complaint.status.in_(open_statuses)
     ).all()
 
     merged_parent = None
+    merged_dist_m = None
     for cand in existing_open:
         dist_m = haversine_distance_meters(latitude, longitude, cand.latitude, cand.longitude)
         if dist_m <= 20.0:  # Same spot or different angle within 20m
             merged_parent = cand
+            merged_dist_m = dist_m
             break
+
+    if merged_parent and matched_cat:
+        merged_parent.category_id = matched_cat.id
+        merged_parent.ai_predicted_category_id = matched_cat.id
+        merged_parent.ai_confidence = ai_result.get('confidence', merged_parent.ai_confidence)
+        merged_parent.ai_low_confidence = ai_result.get('low_confidence', merged_parent.ai_low_confidence)
+        merged_parent.ai_classification_status = ai_result.get('status', merged_parent.ai_classification_status)
+        merged_parent.ai_model_version = ai_result.get('model_version', merged_parent.ai_model_version)
+        assigned_dept = routing_service.get_department_for_category(matched_cat.id)
+        merged_parent.department_id = assigned_dept.id if assigned_dept else merged_parent.department_id
+        db.session.add(merged_parent)
 
     if merged_parent:
         # Merge this report into the existing complaint

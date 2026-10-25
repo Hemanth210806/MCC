@@ -3,29 +3,79 @@ export function parseExifGps(arrayBuffer) {
   try {
     const dataView = new DataView(arrayBuffer);
     if (dataView.byteLength < 4) return null;
-    if (dataView.getUint16(0, false) !== 0xFFD8) {
-      return null; // Not a JPEG
+
+    if (dataView.getUint16(0, false) === 0xFFD8) {
+      let offset = 2;
+      const length = dataView.byteLength;
+
+      while (offset < length) {
+        if (dataView.getUint8(offset) !== 0xFF) return null;
+        const marker = dataView.getUint8(offset + 1);
+
+        if (marker === 0xE1) {
+          return parseExifBlock(dataView, offset + 4);
+        } else if ((marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE || marker === 0xDB || marker === 0xC0) {
+          const markerLength = dataView.getUint16(offset + 2, false);
+          offset += 2 + markerLength;
+        } else {
+          offset += 2;
+        }
+      }
     }
 
-    let offset = 2;
-    const length = dataView.byteLength;
-
-    while (offset < length) {
-      if (dataView.getUint8(offset) !== 0xFF) return null;
-      const marker = dataView.getUint8(offset + 1);
-
-      if (marker === 0xE1) {
-        // APP1 marker
-        return parseExifBlock(dataView, offset + 4);
-      } else if ((marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE || marker === 0xDB || marker === 0xC0) {
-        const markerLength = dataView.getUint16(offset + 2, false);
-        offset += 2 + markerLength;
-      } else {
-        offset += 2;
-      }
+    if (dataView.byteLength > 8 && String.fromCharCode(
+      dataView.getUint8(0),
+      dataView.getUint8(1),
+      dataView.getUint8(2),
+      dataView.getUint8(3),
+      dataView.getUint8(4),
+      dataView.getUint8(5),
+      dataView.getUint8(6),
+      dataView.getUint8(7)
+    ) === '\x89PNG\r\n\x1a\n') {
+      return parsePngExif(dataView);
     }
   } catch (err) {
     console.warn('EXIF parse error:', err);
+  }
+  return null;
+}
+
+function parsePngExif(dataView) {
+  try {
+    let offset = 8;
+    const length = dataView.byteLength;
+
+    while (offset + 8 <= length) {
+      const chunkLength = dataView.getUint32(offset, false);
+      const chunkTypeBytes = [
+        dataView.getUint8(offset + 4),
+        dataView.getUint8(offset + 5),
+        dataView.getUint8(offset + 6),
+        dataView.getUint8(offset + 7)
+      ];
+      const chunkType = String.fromCharCode(...chunkTypeBytes);
+      const chunkDataStart = offset + 8;
+      const chunkDataEnd = chunkDataStart + chunkLength;
+
+      if (chunkType === 'eXIf' && chunkLength >= 6) {
+        const exifHeader = String.fromCharCode(
+          dataView.getUint8(chunkDataStart),
+          dataView.getUint8(chunkDataStart + 1),
+          dataView.getUint8(chunkDataStart + 2),
+          dataView.getUint8(chunkDataStart + 3),
+          dataView.getUint8(chunkDataStart + 4),
+          dataView.getUint8(chunkDataStart + 5)
+        );
+        if (exifHeader === 'Exif\x00\x00') {
+          return parseExifBlock(dataView, chunkDataStart + 6);
+        }
+      }
+
+      offset = chunkDataEnd + 4;
+    }
+  } catch (err) {
+    console.warn('PNG EXIF parse error:', err);
   }
   return null;
 }
@@ -54,50 +104,51 @@ function parseExifBlock(dataView, start) {
       const entryOffset = tiffStart + firstIFDOffset + 2 + i * 12;
       const tag = dataView.getUint16(entryOffset, isLittle);
       if (tag === 0x8825) {
-        // GPSInfo tag
         gpsOffset = dataView.getUint32(entryOffset + 8, isLittle);
       } else if (tag === 0x0132 || tag === 0x9003) {
-        // DateTime or DateTimeOriginal
-        const strOffset = dataView.getUint32(entryOffset + 8, isLittle);
-        dateTimeOriginal = readAscii(dataView, tiffStart + strOffset, 19);
+        const valueOffset = dataView.getUint32(entryOffset + 8, isLittle);
+        const count = dataView.getUint32(entryOffset + 4, isLittle);
+        const type = dataView.getUint16(entryOffset + 2, isLittle);
+        if (type === 2 && count > 0) {
+          dateTimeOriginal = readAscii(dataView, tiffStart + valueOffset, count);
+        }
       }
     }
 
-    if (!gpsOffset) return null;
+    if (gpsOffset === null) return null;
 
-    const gpsEntries = dataView.getUint16(tiffStart + gpsOffset, isLittle);
+    const gpsStart = tiffStart + gpsOffset;
+    const gpsEntries = dataView.getUint16(gpsStart, isLittle);
     let latValues = null;
     let latRef = 'N';
     let lonValues = null;
     let lonRef = 'E';
 
     for (let i = 0; i < gpsEntries; i++) {
-      const entryOffset = tiffStart + gpsOffset + 2 + i * 12;
+      const entryOffset = gpsStart + 2 + i * 12;
       const tag = dataView.getUint16(entryOffset, isLittle);
+      const type = dataView.getUint16(entryOffset + 2, isLittle);
+      const count = dataView.getUint32(entryOffset + 4, isLittle);
+      const valueOrOffset = dataView.getUint32(entryOffset + 8, isLittle);
 
       if (tag === 0x0001) {
-        latRef = String.fromCharCode(dataView.getUint8(entryOffset + 8));
+        latRef = readAsciiValue(dataView, tiffStart + valueOrOffset, type, count, isLittle, 2).charAt(0) || 'N';
       } else if (tag === 0x0002) {
-        const offsetToVals = dataView.getUint32(entryOffset + 8, isLittle);
-        latValues = readRationals(dataView, tiffStart + offsetToVals, isLittle, 3);
+        latValues = readRationals(dataView, tiffStart + valueOrOffset, isLittle, count);
       } else if (tag === 0x0003) {
-        lonRef = String.fromCharCode(dataView.getUint8(entryOffset + 8));
+        lonRef = readAsciiValue(dataView, tiffStart + valueOrOffset, type, count, isLittle, 2).charAt(0) || 'E';
       } else if (tag === 0x0004) {
-        const offsetToVals = dataView.getUint32(entryOffset + 8, isLittle);
-        lonValues = readRationals(dataView, tiffStart + offsetToVals, isLittle, 3);
+        lonValues = readRationals(dataView, tiffStart + valueOrOffset, isLittle, count);
       }
     }
 
     if (latValues && lonValues) {
-      let lat = latValues[0] + latValues[1] / 60.0 + latValues[2] / 3600.0;
-      if (latRef !== 'N') lat = -lat;
-
-      let lon = lonValues[0] + lonValues[1] / 60.0 + lonValues[2] / 3600.0;
-      if (lonRef !== 'E') lon = -lon;
+      const lat = latValues[0] + latValues[1] / 60.0 + latValues[2] / 3600.0;
+      const lon = lonValues[0] + lonValues[1] / 60.0 + lonValues[2] / 3600.0;
 
       return {
-        latitude: parseFloat(lat.toFixed(6)),
-        longitude: parseFloat(lon.toFixed(6)),
+        latitude: parseFloat((latRef === 'S' ? -lat : lat).toFixed(6)),
+        longitude: parseFloat((lonRef === 'W' ? -lon : lon).toFixed(6)),
         timestamp: dateTimeOriginal || null
       };
     }
@@ -105,6 +156,22 @@ function parseExifBlock(dataView, start) {
     console.warn('Failed parsing EXIF details:', e);
   }
   return null;
+}
+
+function readAsciiValue(dataView, startOffset, type, count, isLittle, fallbackLength = 2) {
+  if (type === 2) {
+    return readAscii(dataView, startOffset, count || fallbackLength);
+  }
+
+  if (type === 1 && count > 0) {
+    const bytes = [];
+    for (let i = 0; i < Math.min(count, 8); i++) {
+      bytes.push(String.fromCharCode(dataView.getUint8(startOffset + i)));
+    }
+    return bytes.join('').trim();
+  }
+
+  return '';
 }
 
 function readAscii(dataView, offset, length) {
@@ -175,21 +242,22 @@ async function extractGpsFromImageText(file) {
 // Extracts EXIF GPS metadata from a browser File / Blob.
 export async function extractExifGps(file) {
   if (!file) return null;
-  const isJpg = (file.type && (file.type.toLowerCase().includes('jpeg') || file.type.toLowerCase().includes('jpg'))) ||
-                (file.name && (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')));
-  const isImage = isJpg || (file.type && file.type.startsWith('image/'));
+  const isImage = (file.type && file.type.startsWith('image/')) ||
+    (file.name && /\.(jpg|jpeg|png|webp|bmp|heic|heif)$/i.test(file.name));
 
   if (!isImage) return null;
 
   try {
-    // Fast binary EXIF parsing (< 5ms, no network, 100% reliable for geotagged camera photos)
-    if (isJpg) {
-      const sliceSize = Math.min(file.size, 2097152);
-      const arrayBuffer = await file.slice(0, sliceSize).arrayBuffer();
-      const exifResult = parseExifGps(arrayBuffer);
-      if (exifResult && exifResult.latitude && exifResult.longitude) {
-        return { ...exifResult, source: 'exif' };
-      }
+    const sliceSize = Math.min(file.size, 2097152);
+    const arrayBuffer = await file.slice(0, sliceSize).arrayBuffer();
+    const exifResult = parseExifGps(arrayBuffer);
+    if (exifResult && exifResult.latitude && exifResult.longitude) {
+      return { ...exifResult, source: 'exif' };
+    }
+
+    const ocrResult = await extractGpsFromImageText(file);
+    if (ocrResult && ocrResult.latitude && ocrResult.longitude) {
+      return { ...ocrResult, source: 'ocr' };
     }
   } catch (err) {
     console.warn('Error in extractExifGps:', err);

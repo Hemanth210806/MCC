@@ -6,6 +6,7 @@ from app.models.evidence import ResolutionEvidence
 from app.services.sla_service import sla_service
 from app.services.storage_service import storage_service
 from app.utils.geo import haversine_distance_meters
+from app.utils.exif_reader import extract_exif_gps
 from app.routes.auth import token_required, roles_required
 
 officer_bp = Blueprint('officer', __name__, url_prefix='/api/officer')
@@ -62,11 +63,29 @@ def submit_resolution(complaint_id):
     if not photo_file:
         return jsonify({'error': 'Resolution evidence photograph is required'}), 400
 
+    # Save proof photo before deciding final GPS source so EXIF can override stale/default values.
     try:
-        lat = float(request.form.get('latitude'))
-        lng = float(request.form.get('longitude'))
-    except (TypeError, ValueError):
-        return jsonify({'error': 'Current resolution GPS latitude and longitude are required'}), 400
+        rel_path = storage_service.save_file(photo_file, subfolder='resolutions')
+        photo_abs_path = storage_service.get_absolute_path(rel_path)
+    except Exception as e:
+        return jsonify({'error': f'Failed to store resolution photo: {str(e)}'}), 400
+
+    exif_data = extract_exif_gps(photo_abs_path)
+    location_source = request.form.get('location_source', 'manual')
+
+    if location_source == 'exif' and exif_data.get('has_gps'):
+        lat = exif_data['latitude']
+        lng = exif_data['longitude']
+    else:
+        try:
+            lat = float(request.form.get('latitude'))
+            lng = float(request.form.get('longitude'))
+        except (TypeError, ValueError):
+            if exif_data.get('has_gps'):
+                lat = exif_data['latitude']
+                lng = exif_data['longitude']
+            else:
+                return jsonify({'error': 'Current resolution GPS latitude and longitude are required'}), 400
 
     gps_acc = request.form.get('gps_accuracy_m')
     try:
@@ -77,10 +96,6 @@ def submit_resolution(complaint_id):
     notes = request.form.get('notes', '')
 
     # 1. Save resolution photo
-    try:
-        rel_path = storage_service.save_file(photo_file, subfolder='resolutions')
-    except Exception as e:
-        return jsonify({'error': f'Failed to store resolution photo: {str(e)}'}), 400
 
     # 2. Compute Haversine distance between original complaint and resolution GPS
     distance_m = haversine_distance_meters(complaint.latitude, complaint.longitude, lat, lng)

@@ -85,7 +85,7 @@ export default function Home({ setActivePage }) {
             </h1>
 
             <p style={{ fontSize: '1.15rem', color: '#cbd5e1', marginBottom: '32px', lineHeight: 1.6 }}>
-              Report potholes, garbage dumps, streetlight faults, and water leakage in seconds. 
+              Report garbage, potholes, and streetlight faults in seconds.
               Powered by deep learning image recognition, authentic 65-ward GIS boundaries, and automated department SLAs.
             </p>
 
@@ -175,14 +175,14 @@ export default function Home({ setActivePage }) {
         </div>
       </section>
 
-      {/* 4 Core Issue Categories */}
+      {/* 3 Core Issue Categories */}
       <section style={{ padding: '60px 0' }} className="container">
         <div style={{ textAlign: 'center', maxWidth: '650px', margin: '0 auto 40px auto' }}>
           <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a' }}>
             Supported Civic Issue Categories
           </h2>
           <p style={{ fontSize: '0.95rem', color: '#64748b', marginTop: '8px' }}>
-            Our deep learning computer vision model classifies photos instantly into one of four municipal departments.
+            Our deep learning computer vision model classifies photos instantly into one of three municipal issue classes.
           </p>
         </div>
 
@@ -223,17 +223,6 @@ export default function Home({ setActivePage }) {
             </div>
           </div>
 
-          <div className="card" style={{ borderTop: '4px solid #0284c7' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0284c7', marginBottom: '8px' }}>
-              💧 Water Leakage
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: '#475569', marginBottom: '14px' }}>
-              Burst pipelines, drinking water supply loss, damaged valves, and urban water pooling.
-            </p>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
-              Dept: Water Supply & Sewerage Board
-            </div>
-          </div>
         </div>
       </section>
 

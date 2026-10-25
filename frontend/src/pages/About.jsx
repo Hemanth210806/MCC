@@ -44,7 +44,7 @@ export default function About() {
             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Deep Learning Vision</div>
               <p style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                MobileNetV2 transfer learning CNN trained on real public datasets for garbage, potholes, streetlights, and water leakage.
+                MobileNetV2 transfer learning CNN trained on real public datasets for Garbage_Waste, Pothole, and Streetlight issue detection.
               </p>
             </div>
 

@@ -4,7 +4,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from app import create_app
 from app.extensions import db
 
-env = os.environ.get('FLASK_ENV', 'development')
+# Default to a stable non-reloader startup so local runs do not die or restart unexpectedly.
+env = os.environ.get('FLASK_ENV', 'production')
 app = create_app(env)
 
 # Ensure database tables exist and auto-seed if newly created
@@ -47,5 +48,9 @@ with app.app_context():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"Starting Mysuru Civic Connect (MCC) Backend on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=(env == 'development'))
+    debug_mode = os.environ.get('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes', 'on')
+    if env == 'development' and not debug_mode:
+        debug_mode = True
+
+    print(f"Starting Mysuru Civic Connect (MCC) Backend on port {port}... (debug={debug_mode}, reloader=False)")
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False, threaded=True)

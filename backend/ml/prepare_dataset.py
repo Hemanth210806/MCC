@@ -1,120 +1,111 @@
-import os
-import shutil
+﻿import os
 import hashlib
-import random
 import json
+import random
+from pathlib import Path
 from PIL import Image
 
-def get_file_hash(filepath: str) -> str:
-    hasher = hashlib.md5()
-    with open(filepath, 'rb') as f:
-        buf = f.read(65536)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(65536)
-    return hasher.hexdigest()
+ROOT = Path(__file__).resolve().parent
+RAW_DIR = ROOT / 'raw_datasets'
+DATASET_DIR = ROOT / 'dataset'
+PROCESSED_DIR = DATASET_DIR / 'processed'
+CLASS_NAMES = ['Garbage_Waste', 'Pothole', 'Streetlight']
+RAW_SOURCE_MAP = {
+    'Garbage_Waste': [RAW_DIR / 'asdasdasasdas_garbage-classification'],
+    'Pothole': [RAW_DIR / 'chitholian_annotated-potholes-dataset' / 'annotated-images'],
+    'Streetlight': [RAW_DIR / 'samuelayman_light-poles' / 'final light poles'],
+}
 
-def is_valid_image(filepath: str) -> bool:
+
+def get_file_hash(path: str) -> str:
+    digest = hashlib.md5()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(65536), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def is_valid_image(path: str) -> bool:
     try:
-        with Image.open(filepath) as img:
+        with Image.open(path) as img:
             img.verify()
-        # Ensure we can read and convert to RGB
-        with Image.open(filepath) as img:
+        with Image.open(path) as img:
             img.convert('RGB')
         return True
     except Exception:
         return False
 
-def collect_images_from_dir(dir_path: str, max_count: int = 400) -> list:
-    valid_images = []
-    seen_hashes = set()
 
-    for root, _, files in os.walk(dir_path):
+def collect_images(folder: Path, max_count: int = 2000):
+    valid = []
+    seen = set()
+    for root, _, files in os.walk(folder):
         for file in files:
-            ext = file.lower().rsplit('.', 1)[-1]
-            if ext in ('jpg', 'jpeg', 'png', 'webp'):
-                fpath = os.path.join(root, file)
-                if is_valid_image(fpath):
-                    h = get_file_hash(fpath)
-                    if h not in seen_hashes:
-                        seen_hashes.add(h)
-                        valid_images.append(fpath)
-                        if len(valid_images) >= max_count:
-                            return valid_images
-    return valid_images
+            if not file.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+                continue
+            path = Path(root) / file
+            if not is_valid_image(str(path)):
+                continue
+            digest = get_file_hash(str(path))
+            if digest in seen:
+                continue
+            seen.add(digest)
+            valid.append(str(path))
+            if len(valid) >= max_count:
+                return valid
+    return valid
+
+
+def save_split(split_name: str, label: str, files):
+    dest_dir = PROCESSED_DIR / split_name / label
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for index, src_path in enumerate(files):
+        dst = dest_dir / f'{label}_{index:04d}.jpg'
+        with Image.open(src_path) as img:
+            rgb = img.convert('RGB').resize((224, 224))
+            rgb.save(dst, 'JPEG', quality=90)
+
 
 def main():
-    ml_dir = os.path.abspath(os.path.dirname(__file__))
-    raw_dir = os.path.join(ml_dir, 'raw_datasets')
-    dataset_dir = os.path.join(ml_dir, 'dataset')
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    for split_name in ['train', 'test']:
+        for label in CLASS_NAMES:
+            (PROCESSED_DIR / split_name / label).mkdir(parents=True, exist_ok=True)
 
-    categories = ['garbage', 'pothole', 'streetlight', 'water_leakage']
-    splits = ['train', 'val', 'test']
+    stats = {label: {'train': 0, 'test': 0, 'total': 0} for label in CLASS_NAMES}
+    random.seed(42)
 
-    # Clean existing destination dirs
-    for s in splits:
-        for c in categories:
-            os.makedirs(os.path.join(dataset_dir, s, c), exist_ok=True)
-
-    print("=== Preparing MCC 4-Category Civic Dataset ===")
-
-    stats = {c: {'train': 0, 'val': 0, 'test': 0, 'total': 0} for c in categories}
-
-    for cat in categories:
-        # Search for raw folders containing category files
-        cat_images = []
-        for root, dirs, files in os.walk(raw_dir):
-            r_lower = root.lower()
-            if cat == 'garbage' and any(k in r_lower for k in ['garbage', 'waste', 'trash', 'cardboard', 'plastic']):
-                cat_images.extend(collect_images_from_dir(root, max_count=150))
-            elif cat == 'pothole' and any(k in r_lower for k in ['pothole', 'road']):
-                cat_images.extend(collect_images_from_dir(root, max_count=150))
-            elif cat == 'streetlight' and any(k in r_lower for k in ['light', 'pole', 'lamp', 'street']):
-                cat_images.extend(collect_images_from_dir(root, max_count=150))
-            elif cat == 'water_leakage' and any(k in r_lower for k in ['pipe', 'water', 'leak']):
-                cat_images.extend(collect_images_from_dir(root, max_count=150))
-
-        # Deduplicate and shuffle
-        unique_paths = list(set(cat_images))
-        random.seed(42)
-        random.shuffle(unique_paths)
-
-        # Cap per class to keep balanced
-        selected = unique_paths[:200]
-        total = len(selected)
-        print(f"Collected {total} real images for class: {cat}")
-
-        if total == 0:
-            print(f"[WARNING] No images found for {cat} in raw_datasets! Please run download_datasets.py first.")
+    for label in CLASS_NAMES:
+        selected = []
+        for folder in RAW_SOURCE_MAP.get(label, []):
+            if folder.exists():
+                selected.extend(collect_images(folder, max_count=2000))
+        selected = list(dict.fromkeys(selected))
+        if not selected:
+            print(f'No images found for {label}; skipping.')
             continue
 
-        n_train = int(total * 0.70)
-        n_val = int(total * 0.15)
-        train_set = selected[:n_train]
-        val_set = selected[n_train:n_train + n_val]
-        test_set = selected[n_train + n_val:]
+        random.shuffle(selected)
+        total = len(selected)
+        train_end = max(1, int(total * 0.7))
+        train_files = selected[:train_end]
+        test_files = selected[train_end:]
 
-        for s_name, s_imgs in [('train', train_set), ('val', val_set), ('test', test_set)]:
-            dest_folder = os.path.join(dataset_dir, s_name, cat)
-            for idx, img_path in enumerate(s_imgs):
-                dest_file = os.path.join(dest_folder, f"{cat}_{idx:04d}.jpg")
-                try:
-                    with Image.open(img_path) as im:
-                        rgb_im = im.convert('RGB').resize((224, 224))
-                        rgb_im.save(dest_file, "JPEG", quality=90)
-                except Exception as e:
-                    pass
-            stats[cat][s_name] = len(s_imgs)
+        save_split('train', label, train_files)
+        save_split('test', label, test_files)
 
-        stats[cat]['total'] = total
+        stats[label]['train'] = len(train_files)
+        stats[label]['test'] = len(test_files)
+        stats[label]['total'] = total
 
-    report_path = os.path.join(dataset_dir, 'dataset_stats.json')
+    report_path = DATASET_DIR / 'dataset_stats.json'
     with open(report_path, 'w', encoding='utf-8') as f:
         json.dump(stats, f, indent=2)
 
-    print("\n=== Dataset Preparation Summary ===")
+    print('Prepared 3-class dataset:')
     print(json.dumps(stats, indent=2))
-    print(f"Stats saved to {report_path}")
+    print(f'Dataset stats saved to {report_path}')
+
 
 if __name__ == '__main__':
     main()

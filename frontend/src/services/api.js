@@ -12,7 +12,7 @@ export const API_BASE = isSameOriginBackend
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  timeout: 180000,
 });
 
 // Inject JWT token into requests

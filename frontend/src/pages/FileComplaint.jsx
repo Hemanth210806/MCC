@@ -12,6 +12,7 @@ export default function FileComplaint({ setActivePage }) {
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locationMode, setLocationMode] = useState('current');
+  const [locationSource, setLocationSource] = useState('current');
   const [citizenName, setCitizenName] = useState('');
   const [citizenPhone, setCitizenPhone] = useState('');
   const [citizenEmail, setCitizenEmail] = useState('');
@@ -49,6 +50,7 @@ export default function FileComplaint({ setActivePage }) {
     setLatitude(lat);
     setLongitude(lng);
     setLocationMode('manual');
+    setLocationSource('manual');
     setGpsAccuracy(null);
     setExifBadge({
       type: 'manual',
@@ -84,6 +86,7 @@ export default function FileComplaint({ setActivePage }) {
         setLongitude(nextLng);
         setGpsAccuracy(Math.round(pos.coords.accuracy));
         setLocationMode('current');
+        setLocationSource('current');
         setLocating(false);
         setErrorMsg('');
         fetchWardForPoint(nextLat, nextLng);
@@ -126,19 +129,16 @@ export default function FileComplaint({ setActivePage }) {
     e.target.value = '';
 
     setErrorMsg('');
-    // Instant preview so user immediately sees their photo was accepted
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
     setIsStamping(true);
 
     try {
-      // 1. Try reading EXIF GPS from the uploaded photo
       const exif = await extractExifGps(file);
       let targetLat = latitude;
       let targetLng = longitude;
       let detectedTime = null;
 
-      // Only auto-extract EXIF GPS if user hasn't explicitly set a custom map pin
       if (exif && exif.latitude && exif.longitude && !isManualLocationRef.current) {
         targetLat = exif.latitude;
         targetLng = exif.longitude;
@@ -146,12 +146,12 @@ export default function FileComplaint({ setActivePage }) {
         setLatitude(targetLat);
         setLongitude(targetLng);
         setLocationMode('exif');
+        setLocationSource('exif');
         setExifBadge({
           type: 'exif',
           text: `🟢 Camera GPS Auto-Extracted: Lat ${targetLat.toFixed(5)}°, Lng ${targetLng.toFixed(5)}° (Pinned to Ward)`
         });
       } else {
-        // Respect the user's selected/dragged location!
         targetLat = latitude;
         targetLng = longitude;
         setExifBadge({
@@ -160,7 +160,6 @@ export default function FileComplaint({ setActivePage }) {
         });
       }
 
-      // 2. Lookup ward name for watermark
       let wardName = 'Mysuru Ward';
       try {
         const res = await api.get(`/public/wards/lookup?lat=${targetLat}&lng=${targetLng}`);
@@ -171,7 +170,6 @@ export default function FileComplaint({ setActivePage }) {
         }
       } catch (e) {}
 
-      // 3. Stamp visible civic watermark bar onto image
       const stampedFile = await stampGeotagOnImage(file, {
         latitude: targetLat,
         longitude: targetLng,
@@ -185,6 +183,10 @@ export default function FileComplaint({ setActivePage }) {
       }
     } catch (err) {
       console.error('Photo processing error:', err);
+      setExifBadge({
+        type: 'manual',
+        text: `📍 Location Applied: Lat ${latitude.toFixed(5)}°, Lng ${longitude.toFixed(5)}° (Fallback)`
+      });
     } finally {
       setIsStamping(false);
     }
@@ -224,6 +226,7 @@ export default function FileComplaint({ setActivePage }) {
     if (description) formData.append('description', description);
 
     try {
+      formData.append('location_source', locationSource);
       const res = await api.post('/complaints', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -575,6 +578,7 @@ export default function FileComplaint({ setActivePage }) {
               zoom={14}
               wardGeoJson={wardGeoJson}
               draggableMarker={{ lat: latitude, lng: longitude }}
+              showDraggableMarker={true}
               onMarkerDragEnd={handleManualLocationChange}
               onMapClick={handleManualLocationChange}
             />

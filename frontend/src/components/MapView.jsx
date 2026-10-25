@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 
 // Fix Leaflet's default icon paths in bundlers
@@ -13,8 +13,31 @@ L.Icon.Default.mergeOptions({
 const CATEGORY_COLORS = {
   'Garbage / Waste': '#e11d48',
   'Pothole / Road Damage': '#f59e0b',
-  'Streetlight Failure': '#8b5cf6',
-  'Water Leakage': '#0284c7'
+  'Streetlight Failure': '#8b5cf6'
+};
+
+const createPinIcon = (color = '#2563eb', size = 26) => {
+  const markerHtml = `
+    <div style="
+      width:${size}px;
+      height:${size}px;
+      background:${color};
+      border:3px solid white;
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      box-shadow:0 4px 10px rgba(15, 23, 42, 0.28);
+      position:relative;
+    "></div>
+  `;
+
+  return L.divIcon({
+    className: 'custom-complaint-pin',
+    html: markerHtml,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size + 2],
+    tooltipAnchor: [0, -size],
+  });
 };
 
 export default function MapView({
@@ -24,6 +47,7 @@ export default function MapView({
   hotspots = [],
   complaints = [],
   draggableMarker = null,
+  showDraggableMarker = false,
   onMarkerDragEnd = null,
   onMapClick = null,
   onWardSelect = null,
@@ -35,7 +59,9 @@ export default function MapView({
   const geojsonLayerRef = useRef(null);
   const markersLayerRef = useRef(null);
   const hotspotsLayerRef = useRef(null);
-  const pinMarkerRef = useRef(null);
+  const pinPositionRef = useRef(null);
+  const pinDraggingRef = useRef(false);
+  const [dragPinPosition, setDragPinPosition] = useState({ x: 0, y: 0 });
 
   // Initialize Map
   useEffect(() => {
@@ -201,25 +227,15 @@ export default function MapView({
     const group = L.layerGroup();
 
     complaints.forEach((c) => {
-      const color = CATEGORY_COLORS[c.category_name] || '#3b82f6';
-      
-      const customIcon = L.divIcon({
-        className: 'custom-pin',
-        html: `
-          <div style="
-            width: 14px;
-            height: 14px;
-            background-color: ${color};
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 0 4px rgba(0,0,0,0.4);
-          "></div>
-        `,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-      });
+      if (c.latitude == null || c.longitude == null) return;
 
-      const marker = L.marker([c.latitude, c.longitude], { icon: customIcon });
+      const color = CATEGORY_COLORS[c.category_name] || '#3b82f6';
+      const customIcon = createPinIcon(color, 20);
+
+      const marker = L.marker([Number(c.latitude), Number(c.longitude)], {
+        icon: customIcon,
+        zIndexOffset: 900,
+      });
 
       marker.bindPopup(`
         <div style="font-family: inherit; font-size: 0.82rem;">
@@ -243,43 +259,108 @@ export default function MapView({
     onMarkerDragEndRef.current = onMarkerDragEnd;
   }, [onMarkerDragEnd]);
 
-  // Draggable Pin for Complaint Filing
+  // Draggable pin overlay for complaint filing only
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    if (draggableMarker && draggableMarker.lat && draggableMarker.lng) {
-      if (pinMarkerRef.current) {
-        const currentPos = pinMarkerRef.current.getLatLng();
-        // Only update marker position if coordinates actually changed by more than ~1 meter
-        const dist = Math.abs(currentPos.lat - draggableMarker.lat) + Math.abs(currentPos.lng - draggableMarker.lng);
-        if (dist > 0.00001) {
-          pinMarkerRef.current.setLatLng([draggableMarker.lat, draggableMarker.lng]);
-        }
-      } else {
-        const marker = L.marker([draggableMarker.lat, draggableMarker.lng], {
-          draggable: true,
-          autoPan: true
-        }).addTo(mapRef.current);
-
-        marker.on('dragend', function (e) {
-          const latlng = e.target.getLatLng();
-          if (onMarkerDragEndRef.current) {
-            onMarkerDragEndRef.current(latlng.lat, latlng.lng);
-          }
-        });
-
-        marker.bindPopup('<b>Drag to fine-tune exact issue location</b>').openPopup();
-        pinMarkerRef.current = marker;
-      }
-    } else if (pinMarkerRef.current) {
-      mapRef.current.removeLayer(pinMarkerRef.current);
-      pinMarkerRef.current = null;
+    if (!mapRef.current || !showDraggableMarker || !draggableMarker) {
+      pinPositionRef.current = null;
+      return;
     }
-  }, [draggableMarker?.lat, draggableMarker?.lng]);
+
+    const updatePinPosition = () => {
+      if (!mapRef.current || !draggableMarker || !draggableMarker.lat || !draggableMarker.lng) {
+        pinPositionRef.current = null;
+        return;
+      }
+
+      const point = mapRef.current.latLngToContainerPoint(L.latLng(draggableMarker.lat, draggableMarker.lng));
+      pinPositionRef.current = point;
+      setDragPinPosition({ x: point.x, y: point.y });
+    };
+
+    updatePinPosition();
+    mapRef.current.on('move zoom', updatePinPosition);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off('move zoom', updatePinPosition);
+      }
+    };
+  }, [showDraggableMarker, draggableMarker?.lat, draggableMarker?.lng]);
+
+  const handlePinPointerDown = (event) => {
+    if (!mapRef.current || !showDraggableMarker || !onMarkerDragEndRef.current) return;
+
+    pinDraggingRef.current = true;
+    const startPoint = { x: event.clientX, y: event.clientY };
+
+    const handlePointerMove = (moveEvent) => {
+      if (!pinDraggingRef.current) return;
+      const mapContainer = mapRef.current.getContainer();
+      const bounds = mapContainer.getBoundingClientRect();
+      const nextPoint = {
+        x: Math.min(Math.max(moveEvent.clientX - bounds.left, 0), bounds.width),
+        y: Math.min(Math.max(moveEvent.clientY - bounds.top, 0), bounds.height)
+      };
+
+      const latlng = mapRef.current.containerPointToLatLng(nextPoint);
+      onMarkerDragEndRef.current(latlng.lat, latlng.lng);
+      setDragPinPosition(nextPoint);
+    };
+
+    const stopDragging = () => {
+      pinDraggingRef.current = false;
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopDragging);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopDragging);
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   return (
     <div style={{ height, width: '100%', position: 'relative', overflow: 'hidden' }}>
       <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
+      {showDraggableMarker && pinPositionRef.current && (
+        <div
+          onPointerDown={handlePinPointerDown}
+          style={{
+            position: 'absolute',
+            left: `${dragPinPosition.x}px`,
+            top: `${dragPinPosition.y}px`,
+            width: '26px',
+            height: '26px',
+            transform: 'translate(-50%, -100%)',
+            zIndex: 1200,
+            cursor: 'grab',
+            pointerEvents: 'auto',
+            filter: 'drop-shadow(0 4px 6px rgba(15, 23, 42, 0.35))'
+          }}
+          aria-label="Issue pin"
+        >
+          <div style={{
+            width: '26px',
+            height: '26px',
+            background: '#2563eb',
+            border: '3px solid white',
+            borderRadius: '50% 50% 50% 0',
+            transform: 'rotate(-45deg)',
+            position: 'relative'
+          }} />
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            width: '8px',
+            height: '8px',
+            background: 'white',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%) rotate(45deg)'
+          }} />
+        </div>
+      )}
     </div>
   );
 }

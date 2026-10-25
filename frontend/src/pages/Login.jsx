@@ -184,23 +184,6 @@ export default function Login({ setActivePage }) {
                 <div style={{ fontSize: '0.70rem', color: '#64748b' }}>elec.officer@mcc.gov.in</div>
               </button>
 
-              <button 
-                type="button"
-                onClick={() => handleQuickLogin('water.officer@mcc.gov.in', 'Officer@123')}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '8px 10px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  textAlign: 'left'
-                }}
-              >
-                <strong style={{ color: '#0284c7' }}>🚰 Water Leakage</strong>
-                <div style={{ fontSize: '0.70rem', color: '#64748b' }}>water.officer@mcc.gov.in</div>
-              </button>
             </div>
 
             <button 

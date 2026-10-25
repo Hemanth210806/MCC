@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ComplaintCard from '../components/ComplaintCard';
 import api from '../services/api';
 import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter, Calendar } from 'lucide-react';
-import { formatDateTime } from '../utils/exifHelper';
+import { formatDateTime, extractExifGps } from '../utils/exifHelper';
 
 export default function OfficerDashboard() {
   const { user } = useAuth();
@@ -18,6 +18,7 @@ export default function OfficerDashboard() {
   const [resolvePreview, setResolvePreview] = useState(null);
   const [resolveLat, setResolveLat] = useState(12.2958);
   const [resolveLng, setResolveLng] = useState(76.6394);
+  const [resolveLocationSource, setResolveLocationSource] = useState('manual');
   const [resolveNotes, setResolveNotes] = useState('');
   const [resolving, setResolving] = useState(false);
   const [modalMsg, setModalMsg] = useState('');
@@ -54,6 +55,7 @@ export default function OfficerDashboard() {
     setSelectedComplaint(c);
     setResolveLat(c.latitude + 0.0001); // near original
     setResolveLng(c.longitude + 0.0001);
+    setResolveLocationSource('manual');
     setResolvePhoto(null);
     setResolvePreview(null);
     setResolveNotes('');
@@ -66,12 +68,33 @@ export default function OfficerDashboard() {
         (pos) => {
           setResolveLat(pos.coords.latitude);
           setResolveLng(pos.coords.longitude);
+          setResolveLocationSource('current');
         },
         () => {
           alert('GPS permission not granted; using current preset pin.');
         },
         { enableHighAccuracy: true }
       );
+    }
+  };
+
+  const handleResolvePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResolvePhoto(file);
+    setResolvePreview(URL.createObjectURL(file));
+
+    try {
+      const exif = await extractExifGps(file);
+      if (exif && exif.latitude && exif.longitude) {
+        setResolveLat(exif.latitude);
+        setResolveLng(exif.longitude);
+        setResolveLocationSource('exif');
+        setModalMsg(`📍 Resolution photo geotag detected: ${exif.latitude.toFixed(5)}, ${exif.longitude.toFixed(5)}`);
+      }
+    } catch (err) {
+      console.warn('Resolution photo EXIF parse failed:', err);
     }
   };
 
@@ -87,6 +110,7 @@ export default function OfficerDashboard() {
     fd.append('resolution_photo', resolvePhoto);
     fd.append('latitude', resolveLat);
     fd.append('longitude', resolveLng);
+    fd.append('location_source', resolveLocationSource);
     fd.append('notes', resolveNotes);
 
     try {
@@ -243,18 +267,13 @@ export default function OfficerDashboard() {
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a8a' }}>Upload Completed Work Photo</div>
                   </div>
                 )}
-                <input 
-                  id="res-photo-input" 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment" 
-                  onChange={(e) => {
-                    if (e.target.files[0]) {
-                      setResolvePhoto(e.target.files[0]);
-                      setResolvePreview(URL.createObjectURL(e.target.files[0]));
-                    }
-                  }} 
-                  style={{ display: 'none' }} 
+                <input
+                  id="res-photo-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleResolvePhotoChange}
+                  style={{ display: 'none' }}
                 />
               </div>
 

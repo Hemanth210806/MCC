@@ -9,22 +9,25 @@ def main():
     ml_dir = os.path.abspath(os.path.dirname(__file__))
     model_dir = os.path.join(ml_dir, 'model')
     dataset_dir = os.path.join(ml_dir, 'dataset')
-    test_dir = os.path.join(dataset_dir, 'test')
-    model_path = os.path.join(model_dir, 'mcc_classifier.h5')
+    test_dir = os.path.join(dataset_dir, 'processed', 'test')
+    model_path = os.path.join(model_dir, 'civic_issue_mobilenetv2.keras')
 
     if not os.path.exists(model_path):
         print(f"[ERROR] Trained model not found at {model_path}! Run train_model.py first.")
         return
 
     print("Loading model and test dataset...")
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(model_path, compile=False)
 
-    test_datagen = ImageDataGenerator(rescale=1./255)
+    test_datagen = ImageDataGenerator(
+        preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input,
+    )
     test_generator = test_datagen.flow_from_directory(
         test_dir,
         target_size=(224, 224),
         batch_size=16,
         class_mode='categorical',
+        classes=['Garbage_Waste', 'Pothole', 'Streetlight'],
         shuffle=False
     )
 

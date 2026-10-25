@@ -25,7 +25,7 @@ class Config:
 
     # ML Config
     project_root = os.path.abspath(os.path.join(basedir, '..'))
-    default_ml_model_path = os.environ.get('ML_MODEL_PATH', os.path.join(project_root, 'models', 'mcc_mobilenetv2.keras'))
+    default_ml_model_path = os.environ.get('ML_MODEL_PATH', os.path.join(project_root, 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'))
     if not os.path.isabs(default_ml_model_path):
         default_ml_model_path = os.path.join(project_root, default_ml_model_path)
     ML_MODEL_PATH = default_ml_model_path

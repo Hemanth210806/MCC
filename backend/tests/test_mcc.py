@@ -17,6 +17,7 @@ from app.models.important_location import ImportantLocation
 from app.models.complaint import Complaint, ComplaintImage, ComplaintStatusHistory
 from app.models.analytics import SlaRule, Hotspot, RecurringIssue
 from app.utils.geo import haversine_distance_meters
+from app.utils.exif_reader import extract_exif_gps
 from app.services.ward_lookup import ward_lookup_service
 from app.services.priority_engine import priority_engine
 from app.services.routing_service import routing_service
@@ -24,6 +25,7 @@ from app.services.sla_service import sla_service
 from app.services.recurring_service import recurring_service
 from app.services.hotspot_service import hotspot_service
 from app.routes.auth import generate_jwt
+from ml.inference import CATEGORY_LABEL_MAP, normalize_label
 
 @pytest.fixture
 def app():
@@ -79,6 +81,35 @@ def client(app):
     return app.test_client()
 
 # ----------------- 1. Ward Point-in-Polygon Tests -----------------
+def test_geotagged_photo_exif_is_read():
+    from PIL import Image, TiffImagePlugin
+
+    img_path = os.path.join(os.path.dirname(__file__), 'tmp_geotag_test.jpg')
+    exif = Image.Exif()
+    exif[34853] = {
+        1: 'N',
+        2: (
+            TiffImagePlugin.IFDRational(12, 1),
+            TiffImagePlugin.IFDRational(30, 1),
+            TiffImagePlugin.IFDRational(0, 1),
+        ),
+        3: 'E',
+        4: (
+            TiffImagePlugin.IFDRational(76, 1),
+            TiffImagePlugin.IFDRational(39, 1),
+            TiffImagePlugin.IFDRational(0, 1),
+        ),
+    }
+    Image.new('RGB', (10, 10), color='blue').save(img_path, format='JPEG', exif=exif)
+
+    res = extract_exif_gps(img_path)
+    assert res['has_gps'] is True
+    assert abs(res['latitude'] - 12.5) < 1e-6
+    assert abs(res['longitude'] - 76.65) < 1e-6
+
+    os.remove(img_path)
+
+
 def test_real_ward_lookup():
     # Coords in J P Nagar (Ward 12): lat 12.2785, lng 76.6520
     res = ward_lookup_service.lookup(12.2785, 76.6520)
@@ -211,7 +242,53 @@ def test_admin_can_access_admin_queue(client, app):
         res = client.get('/api/admin/verification-queue', headers={'Authorization': f'Bearer {token}'})
         assert res.status_code == 200
 
-# ----------------- 8. Full Complaint Submission Flow -----------------
+# ----------------- 8. Same-Location Duplicate Merge Safety -----------------
+def test_same_location_report_updates_stale_road_damage_to_waste(client, app, monkeypatch):
+    with app.app_context():
+        stale = Complaint(
+            complaint_code='MCC-2026-EXISTING',
+            citizen_name='Existing User',
+            citizen_phone='9845012345',
+            description='Old stale road damage record',
+            category_id=Category.query.filter_by(name='Pothole / Road Damage').first().id,
+            ai_predicted_category_id=Category.query.filter_by(name='Pothole / Road Damage').first().id,
+            latitude=12.2785,
+            longitude=76.6520,
+            ward_id=Ward.query.filter_by(ward_number=61).first().id,
+            status='SUBMITTED',
+            report_count=1,
+            priority='MEDIUM',
+            is_demo_data=False,
+        )
+        db.session.add(stale)
+        db.session.commit()
+
+    monkeypatch.setattr('app.services.classification_service.classification_service.classify_image', lambda image_path: {'category_name': 'Garbage_Waste', 'confidence': 0.94, 'low_confidence': False, 'status': 'CLASSIFIED', 'model_version': 'test'})
+
+    img = io.BytesIO()
+    from PIL import Image
+    Image.new('RGB', (100, 100), color='blue').save(img, format='JPEG')
+    img.seek(0)
+
+    res = client.post('/api/complaints', data={
+        'photo': (img, 'same_spot_waste.jpg'),
+        'latitude': '12.27855',
+        'longitude': '76.6520',
+        'citizen_phone': '9845099999',
+        'description': 'Same location, but actual issue is garbage and waste'
+    }, content_type='multipart/form-data')
+
+    assert res.status_code == 200
+    payload = res.get_json()
+    assert payload['merged'] is True
+    assert payload['complaint_code'] == 'MCC-2026-EXISTING'
+    assert payload['category_name'] == 'Garbage / Waste'
+
+    with app.app_context():
+        updated = Complaint.query.filter_by(complaint_code='MCC-2026-EXISTING').first()
+        assert updated.category.name == 'Garbage / Waste'
+
+# ----------------- 9. Full Complaint Submission Flow -----------------
 def test_file_complaint_api(client, app):
     # Dummy test image
     from PIL import Image

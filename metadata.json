@@ -1,0 +1,8 @@
+{
+  "name": "Mysuru Civic Connect",
+  "description": "Official Mysuru City Corporation AI-powered civic issue monitoring, GIS ward tracking, automated department SLAs, and public redressal portal.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -27,6 +27,8 @@ WARD_DEPARTMENT_WORKER_SPECS = (
     ("water", "Water Supply & Sewerage"),
 )
 WORKER_PASSWORD = "Worker@123"
+OWNER_EMAIL = "hemanthkm2006@gmail.com"
+OWNER_PASSWORD = "Admin@123"
 
 DEMO_WORKERS = [
     {
@@ -142,6 +144,18 @@ def ensure_demo_workers():
     db.session.commit()
     backfill_complaint_assignments()
 
+def ensure_owner_account():
+    """Keep the branch-2 website-owner portal account available in Flask auth."""
+    owner = User.query.filter_by(email=OWNER_EMAIL).first()
+    if not owner:
+        owner = User(email=OWNER_EMAIL)
+        db.session.add(owner)
+    owner.name = "Hemanth K M"
+    owner.phone = "9880010001"
+    owner.role = "admin"
+    owner.set_password(OWNER_PASSWORD)
+    db.session.commit()
+
 def get_ward_department_worker(ward, department):
     if not ward or not department:
         return None
@@ -178,6 +192,7 @@ def seed_database(app=None):
         db.create_all()
         from app.models.user import User
         if User.query.filter_by(email='admin@mcc.gov.in').first():
+            ensure_owner_account()
             ensure_demo_workers()
             print("Admin user already exists. Ensured demo ward-worker accounts.")
             return
@@ -241,6 +256,10 @@ def seed_database(app=None):
         print(f"Loaded {len(ward_objects)} real MCC wards into database.")
 
         # 5. Seed Users: Admin, Field Officers, Ward Workers, and Ward Corporators
+        owner = User(name="Hemanth K M", email=OWNER_EMAIL, phone="9880010001", role="admin")
+        owner.set_password(OWNER_PASSWORD)
+        db.session.add(owner)
+
         # Admin
         admin = User(name="MCC Administrator", email="admin@mcc.gov.in", phone="9880012345", role="admin")
         admin.set_password("Admin@123")

@@ -378,6 +378,38 @@ def track_complaint():
 
     return jsonify({'complaint': data}), 200
 
+@complaints_bp.route('/search', methods=['GET'])
+def search_complaints():
+    """Public, non-sensitive complaint directory used by the tracking page."""
+    query = request.args.get('query', '').strip().lower()
+    status = request.args.get('status', '').strip().upper()
+    priority = request.args.get('priority', '').strip().upper()
+    ward = request.args.get('ward', '').strip().lower()
+
+    complaints = Complaint.query.order_by(Complaint.created_at.desc()).all()
+    results = []
+    for complaint in complaints:
+        if complaint.status == 'REJECTED':
+            continue
+        data = complaint.to_dict()
+        searchable = ' '.join([
+            data.get('complaint_code') or '',
+            data.get('description') or '',
+            data.get('category_name') or '',
+            data.get('ward_name') or ''
+        ]).lower()
+        if query and query not in searchable:
+            continue
+        if status and status != 'ALL' and data.get('status') != status:
+            continue
+        if priority and priority != 'ALL' and data.get('priority') != priority:
+            continue
+        if ward and ward != 'all' and ward not in f"{data.get('ward_number', '')} {data.get('ward_name', '')}".lower():
+            continue
+        results.append(data)
+
+    return jsonify({'complaints': results, 'total': len(results)}), 200
+
 @complaints_bp.route('/<int:complaint_id>/status-history', methods=['GET'])
 @token_required
 def get_status_history(complaint_id):

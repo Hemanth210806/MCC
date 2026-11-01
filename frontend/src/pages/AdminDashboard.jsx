@@ -101,10 +101,10 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e3a8a' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4b5e28' }}>
             MCC ADMINISTRATIVE CONTROL
           </span>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1f241a' }}>
             City Administration & Verification Console
           </h2>
         </div>
@@ -155,15 +155,15 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
       {/* 1. Verification Queue Tab */}
       {activeTab === 'verification' && (
         <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1f241a', marginBottom: '14px' }}>
             Pending Resolution Approvals ({queue.length})
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '20px' }}>
+          <p style={{ fontSize: '0.85rem', color: '#5e6654', marginBottom: '20px' }}>
             Field Officers must provide geotagged resolution photographs. Compare the initial complaint photo against resolution proof before approving.
           </p>
 
           {queue.length === 0 ? (
-            <div className="card" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            <div className="card" style={{ padding: '40px', textAlign: 'center', color: '#5e6654' }}>
               No resolutions currently pending verification. All officer reports are reviewed!
             </div>
           ) : (
@@ -172,9 +172,9 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 <div key={item.complaint_id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>{item.complaint_code}</span>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>{item.category_name}</h4>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#5e6654' }}>{item.complaint_code}</span>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1f241a' }}>{item.category_name}</h4>
+                      <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>
                         Ward: <strong>{item.ward_name}</strong>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
@@ -187,8 +187,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   {/* Side-by-side thumbnails */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>ORIGINAL ISSUE</div>
-                      <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#5e6654', marginBottom: '4px' }}>ORIGINAL ISSUE</div>
+                      <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e5dcbe' }}>
                         <img 
                           src={getImageUrl(item.original_photo, item.category_name, false)} 
                           alt="Original" 
@@ -206,7 +206,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
 
                     <div>
                       <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#166534', marginBottom: '4px' }}>OFFICER RESOLUTION</div>
-                      <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
+                      <div style={{ height: '120px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e5dcbe' }}>
                         <img 
                           src={getImageUrl(item.resolution_photo, item.category_name, true)} 
                           alt="Resolution" 
@@ -224,7 +224,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   </div>
 
                   {item.officer_notes && (
-                    <div style={{ fontSize: '0.8rem', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.8rem', backgroundColor: '#fbf7ee', padding: '8px', borderRadius: '6px' }}>
                       <strong>Officer Note:</strong> {item.officer_notes}
                     </div>
                   )}
@@ -248,34 +248,34 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="card">
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Total Complaints</div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a' }}>{overview.total_complaints}</div>
+              <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>Total Complaints</div>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#1f241a' }}>{overview.total_complaints}</div>
             </div>
             <div className="card">
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Resolved</div>
+              <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>Resolved</div>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#16a34a' }}>{overview.resolved_count}</div>
               <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>{overview.resolution_rate_pct}% success rate</div>
             </div>
             <div className="card">
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>In Progress</div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#b45309' }}>{overview.in_progress_count}</div>
+              <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>In Progress</div>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#8f6a20' }}>{overview.in_progress_count}</div>
             </div>
             <div className="card">
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Overdue</div>
+              <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>Overdue</div>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#dc2626' }}>{overview.overdue_count}</div>
             </div>
           </div>
 
           {/* Category Breakdown Table */}
           <div className="card">
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1f241a', marginBottom: '14px' }}>
               Category Distribution
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
               {overview.category_breakdown?.map((cat, i) => (
-                <div key={i} style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div key={i} style={{ padding: '12px', backgroundColor: '#fbf7ee', borderRadius: '8px', border: '1px solid #e5dcbe' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>{cat.category}</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e3a8a', marginTop: '4px' }}>{cat.count}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4b5e28', marginTop: '4px' }}>{cat.count}</div>
                 </div>
               ))}
             </div>
@@ -283,13 +283,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
 
           {/* Department Performance */}
           <div className="card">
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1f241a', marginBottom: '14px' }}>
               Department SLA Performance
             </h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                  <tr style={{ borderBottom: '2px solid #e5dcbe', textAlign: 'left', color: '#5e6654' }}>
                     <th style={{ padding: '10px' }}>Department</th>
                     <th style={{ padding: '10px' }}>Total</th>
                     <th style={{ padding: '10px' }}>Resolved</th>
@@ -299,13 +299,13 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 </thead>
                 <tbody>
                   {overview.department_performance?.map((d) => (
-                    <tr key={d.department_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px', fontWeight: 600, color: '#0f172a' }}>{d.department_name}</td>
+                    <tr key={d.department_id} style={{ borderBottom: '1px solid #f3eddc' }}>
+                      <td style={{ padding: '10px', fontWeight: 600, color: '#1f241a' }}>{d.department_name}</td>
                       <td style={{ padding: '10px' }}>{d.total}</td>
                       <td style={{ padding: '10px', color: '#16a34a', fontWeight: 600 }}>{d.resolved}</td>
-                      <td style={{ padding: '10px', color: d.overdue > 0 ? '#dc2626' : '#64748b', fontWeight: 600 }}>{d.overdue}</td>
+                      <td style={{ padding: '10px', color: d.overdue > 0 ? '#dc2626' : '#5e6654', fontWeight: 600 }}>{d.overdue}</td>
                       <td style={{ padding: '10px' }}>
-                        <span style={{ fontWeight: 700, color: d.resolution_rate >= 75 ? '#16a34a' : '#b45309' }}>
+                        <span style={{ fontWeight: 700, color: d.resolution_rate >= 75 ? '#16a34a' : '#8f6a20' }}>
                           {d.resolution_rate}%
                         </span>
                       </td>
@@ -323,10 +323,10 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1f241a' }}>
                 Civic Hotspot Clusters (DBSCAN)
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              <div style={{ fontSize: '0.85rem', color: '#5e6654' }}>
                 Geospatial clusters of persistent civic complaints detected via density-based spatial clustering.
               </div>
             </div>
@@ -346,9 +346,9 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626' }}>🔥 DBSCAN CLUSTER</span>
                   <span className="badge badge-priority-HIGH" style={{ fontSize: '0.65rem' }}>Active</span>
                 </div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>{h.category_name}</h4>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1f241a' }}>{h.category_name}</h4>
                 <div style={{ fontSize: '0.85rem', color: '#475569', margin: '4px 0' }}>Ward: <strong>{h.ward_name}</strong></div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>
                   Complaints Clustered: <strong>{h.complaint_count}</strong><br />
                   Radius: <strong>{Math.round(h.radius_m)} meters</strong>
                 </div>
@@ -364,17 +364,17 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
       {/* 4. Recurring Issues Tab */}
       {activeTab === 'recurring' && (
         <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1f241a', marginBottom: '8px' }}>
             Geographic Recurring Issues
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+          <p style={{ fontSize: '0.85rem', color: '#5e6654', marginBottom: '16px' }}>
             Complaints of the same category reported within 50m of a previously resolved complaint within 90 days.
           </p>
 
           <div className="card" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                <tr style={{ borderBottom: '2px solid #e5dcbe', textAlign: 'left', color: '#5e6654' }}>
                   <th style={{ padding: '10px' }}>Category</th>
                   <th style={{ padding: '10px' }}>New Complaint</th>
                   <th style={{ padding: '10px' }}>Previously Resolved</th>
@@ -384,8 +384,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
               </thead>
               <tbody>
                 {recurring.map((r) => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px', fontWeight: 600, color: '#b45309' }}>{r.category_name}</td>
+                  <tr key={r.id} style={{ borderBottom: '1px solid #f3eddc' }}>
+                    <td style={{ padding: '10px', fontWeight: 600, color: '#8f6a20' }}>{r.category_name}</td>
                     <td style={{ padding: '10px', fontWeight: 700 }}>{r.new_complaint_code}</td>
                     <td style={{ padding: '10px', color: '#16a34a' }}>{r.previous_complaint_code}</td>
                     <td style={{ padding: '10px' }}>
@@ -393,7 +393,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                         {r.distance_m} meters
                       </span>
                     </td>
-                    <td style={{ padding: '10px', color: '#64748b' }}>
+                    <td style={{ padding: '10px', color: '#5e6654' }}>
                       {formatDateTime(r.detected_at)}
                     </td>
                   </tr>
@@ -410,7 +410,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#dc2626', marginBottom: '8px' }}>
             SLA Escalated Overdue Complaints ({overdueList.length})
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+          <p style={{ fontSize: '0.85rem', color: '#5e6654', marginBottom: '16px' }}>
             Complaints that exceeded the configured SLA target hours (24h HIGH, 72h MEDIUM, 168h LOW) without resolution.
           </p>
 
@@ -418,10 +418,10 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
             {overdueList.map((c) => (
               <div key={c.id} className="card" style={{ borderLeft: '4px solid #dc2626' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>{c.complaint_code}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#5e6654' }}>{c.complaint_code}</span>
                   <span className="badge badge-OVERDUE">OVERDUE</span>
                 </div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: '4px 0' }}>{c.category_name}</h4>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1f241a', margin: '4px 0' }}>{c.category_name}</h4>
                 <div style={{ fontSize: '0.82rem', color: '#475569' }}>
                   Ward: <strong>{c.ward_name}</strong> | Dept: <strong>{c.department_name}</strong>
                 </div>
@@ -441,7 +441,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
             <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1 }}>
                 <strong>{c.complaint_code}</strong> · {c.category_name} · Ward {c.ward_number}
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.status} · {c.progress_percent || 0}% · {c.assigned_worker_name || 'Unassigned'}</div>
+                <div style={{ fontSize: '0.8rem', color: '#5e6654' }}>{c.status} · {c.progress_percent || 0}% · {c.assigned_worker_name || 'Unassigned'}</div>
               </div>
               <select className="form-select" value={c.assigned_worker_id || ''} onChange={async (e) => {
                 if (!e.target.value) return;
@@ -474,11 +474,11 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
           <div className="card" style={{ maxWidth: '780px', width: '100%', maxHeight: '92vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a8a' }}>ADMIN RESOLUTION VERIFICATION</span>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4b5e28' }}>ADMIN RESOLUTION VERIFICATION</span>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1f241a' }}>
                   {selectedVerify.complaint_code}: {selectedVerify.category_name}
                 </h3>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.82rem', color: '#5e6654' }}>
                   Ward: <strong>{selectedVerify.ward_name}</strong> | Officer: <strong>{selectedVerify.officer_name}</strong>
                 </div>
               </div>
@@ -492,11 +492,11 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
 
             {/* Side-by-side Evidence Display */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+              <div style={{ backgroundColor: '#fbf7ee', padding: '12px', borderRadius: '8px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#475569', marginBottom: '6px' }}>
                   ORIGINAL CITIZEN REPORT
                 </div>
-                <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
+                <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e5dcbe' }}>
                   <img 
                     src={getImageUrl(selectedVerify.original_photo, selectedVerify.category_name, false)} 
                     alt="Original" 
@@ -507,7 +507,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                     }}
                   />
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#5e6654', marginTop: '6px' }}>
                   GPS: {selectedVerify.original_latitude?.toFixed(5)}, {selectedVerify.original_longitude?.toFixed(5)}
                 </div>
               </div>
@@ -516,7 +516,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#166534', marginBottom: '6px' }}>
                   FIELD OFFICER RESOLUTION PROOF
                 </div>
-                <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
+                <div style={{ height: '220px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#e5dcbe' }}>
                   <img 
                     src={getImageUrl(selectedVerify.resolution_photo, selectedVerify.category_name, true)} 
                     alt="Resolution" 
@@ -535,7 +535,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
 
             {/* Computed Distance Banner */}
             <div style={{
-              backgroundColor: selectedVerify.distance_from_original_m <= 50 ? '#dcfce7' : '#fef3c7',
+              backgroundColor: selectedVerify.distance_from_original_m <= 50 ? '#edf7e7' : '#f7efd2',
               border: `1px solid ${selectedVerify.distance_from_original_m <= 50 ? '#86efac' : '#fde047'}`,
               padding: '12px 16px',
               borderRadius: '8px',
@@ -546,7 +546,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
             }}>
               <div>
                 <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Calculated Geotag Distance:</span>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: selectedVerify.distance_from_original_m <= 50 ? '#166534' : '#b45309' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: selectedVerify.distance_from_original_m <= 50 ? '#166534' : '#8f6a20' }}>
                   {selectedVerify.distance_from_original_m} meters from original site
                 </div>
               </div>

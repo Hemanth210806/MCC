@@ -30,6 +30,7 @@ class User(db.Model):
             'id': self.id,
             'name': self.name,
             'email': self.email,
+            'isOwner': self.email.lower() == 'hemanthkm2006@gmail.com',
             'phone': self.phone,
             'role': self.role,
             'department_id': self.department_id,

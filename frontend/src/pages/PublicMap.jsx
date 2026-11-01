@@ -75,7 +75,7 @@ export default function PublicMap() {
       {/* Map Controls Header */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid #e5dcbe',
         padding: '12px 20px',
         display: 'flex',
         alignItems: 'center',
@@ -85,10 +85,10 @@ export default function PublicMap() {
         gap: '12px'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1f241a', margin: 0 }}>
             Mysuru Municipal Ward Map & Civic Health Monitor
           </h2>
-          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+          <div style={{ fontSize: '0.78rem', color: '#5e6654' }}>
             Select any ward from the dropdown or click a polygon on the map to inspect civic metrics and drill down into complaints.
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function PublicMap() {
         {/* Ward Selector Dropdown & Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a8a' }}>Select Ward:</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4b5e28' }}>Select Ward:</span>
             <select
               id="map-ward-dropdown"
               value={selectedWard?.ward_number || ''}
@@ -152,7 +152,7 @@ export default function PublicMap() {
                 checked={showComplaints} 
                 onChange={(e) => setShowComplaints(e.target.checked)} 
               />
-              <span style={{ color: '#2563eb', fontWeight: 600 }}>📍 Complaint Pins</span>
+              <span style={{ color: '#b38328', fontWeight: 600 }}>📍 Complaint Pins</span>
             </label>
           </div>
         </div>
@@ -161,10 +161,10 @@ export default function PublicMap() {
       {/* Map Container */}
       <div style={{ flex: 1, position: 'relative' }}>
         {loading ? (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9' }}>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3eddc' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: '8px' }}>Loading Mysuru 65 Ward Boundaries...</div>
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Rendering verified GIS GeoJSON polygons and DBSCAN clusters</div>
+              <div style={{ fontWeight: 700, color: '#4b5e28', marginBottom: '8px' }}>Loading Mysuru 65 Ward Boundaries...</div>
+              <div style={{ fontSize: '0.85rem', color: '#5e6654' }}>Rendering verified GIS GeoJSON polygons and DBSCAN clusters</div>
             </div>
           </div>
         ) : (
@@ -191,16 +191,16 @@ export default function PublicMap() {
             backgroundColor: '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.18)',
-            border: '1px solid #e2e8f0',
+            border: '1px solid #e5dcbe',
             padding: '16px',
             zIndex: 30
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#5e6654', textTransform: 'uppercase' }}>
                   WARD {selectedWard.ward_number}
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e3a8a', margin: '2px 0 0 0' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#4b5e28', margin: '2px 0 0 0' }}>
                   {selectedWard.ward_name}
                 </h3>
               </div>
@@ -239,9 +239,9 @@ export default function PublicMap() {
                   padding: '4px 8px',
                   borderRadius: '6px',
                   border: '1px solid #94a3b8',
-                  color: '#0f172a',
+                  color: '#1f241a',
                   fontWeight: 700,
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: '#fbf7ee',
                   cursor: 'pointer'
                 }}
               >
@@ -260,8 +260,8 @@ export default function PublicMap() {
                 type="button"
                 onClick={() => handleOpenFilter('all')}
                 style={{
-                  backgroundColor: activeFilter === 'all' ? '#e0f2fe' : '#f8fafc',
-                  border: `1.5px solid ${activeFilter === 'all' ? '#0284c7' : '#e2e8f0'}`,
+                  backgroundColor: activeFilter === 'all' ? '#e0f2fe' : '#fbf7ee',
+                  border: `1.5px solid ${activeFilter === 'all' ? '#0284c7' : '#e5dcbe'}`,
                   padding: '10px',
                   borderRadius: '8px',
                   textAlign: 'left',
@@ -269,8 +269,8 @@ export default function PublicMap() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>Total Reports</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{selectedWard.total_complaints || 0}</div>
+                <div style={{ color: '#5e6654', fontSize: '0.75rem' }}>Total Reports</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1f241a' }}>{selectedWard.total_complaints || 0}</div>
                 <div style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>View list →</div>
               </button>
 
@@ -279,8 +279,8 @@ export default function PublicMap() {
                 type="button"
                 onClick={() => handleOpenFilter('resolved')}
                 style={{
-                  backgroundColor: activeFilter === 'resolved' ? '#dcfce7' : '#f8fafc',
-                  border: `1.5px solid ${activeFilter === 'resolved' ? '#16a34a' : '#e2e8f0'}`,
+                  backgroundColor: activeFilter === 'resolved' ? '#edf7e7' : '#fbf7ee',
+                  border: `1.5px solid ${activeFilter === 'resolved' ? '#16a34a' : '#e5dcbe'}`,
                   padding: '10px',
                   borderRadius: '8px',
                   textAlign: 'left',
@@ -288,7 +288,7 @@ export default function PublicMap() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>Resolved</div>
+                <div style={{ color: '#5e6654', fontSize: '0.75rem' }}>Resolved</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a' }}>{selectedWard.resolved_count || 0}</div>
                 <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>View list →</div>
               </button>
@@ -298,8 +298,8 @@ export default function PublicMap() {
                 type="button"
                 onClick={() => handleOpenFilter('overdue')}
                 style={{
-                  backgroundColor: activeFilter === 'overdue' ? '#fee2e2' : '#f8fafc',
-                  border: `1.5px solid ${activeFilter === 'overdue' ? '#dc2626' : '#e2e8f0'}`,
+                  backgroundColor: activeFilter === 'overdue' ? '#fee2e2' : '#fbf7ee',
+                  border: `1.5px solid ${activeFilter === 'overdue' ? '#dc2626' : '#e5dcbe'}`,
                   padding: '10px',
                   borderRadius: '8px',
                   textAlign: 'left',
@@ -307,7 +307,7 @@ export default function PublicMap() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>Overdue</div>
+                <div style={{ color: '#5e6654', fontSize: '0.75rem' }}>Overdue</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626' }}>{selectedWard.overdue_count || 0}</div>
                 <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 600, marginTop: '2px' }}>View list →</div>
               </button>
@@ -317,8 +317,8 @@ export default function PublicMap() {
                 type="button"
                 onClick={() => handleOpenFilter('high_priority')}
                 style={{
-                  backgroundColor: activeFilter === 'high_priority' ? '#fef3c7' : '#f8fafc',
-                  border: `1.5px solid ${activeFilter === 'high_priority' ? '#d97706' : '#e2e8f0'}`,
+                  backgroundColor: activeFilter === 'high_priority' ? '#f7efd2' : '#fbf7ee',
+                  border: `1.5px solid ${activeFilter === 'high_priority' ? '#b38328' : '#e5dcbe'}`,
                   padding: '10px',
                   borderRadius: '8px',
                   textAlign: 'left',
@@ -326,9 +326,9 @@ export default function PublicMap() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>High Priority</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>{selectedWard.high_priority_pending || 0}</div>
-                <div style={{ fontSize: '0.68rem', color: '#d97706', fontWeight: 600, marginTop: '2px' }}>View list →</div>
+                <div style={{ color: '#5e6654', fontSize: '0.75rem' }}>High Priority</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#b38328' }}>{selectedWard.high_priority_pending || 0}</div>
+                <div style={{ fontSize: '0.68rem', color: '#b38328', fontWeight: 600, marginTop: '2px' }}>View list →</div>
               </button>
             </div>
           </div>
@@ -345,7 +345,7 @@ export default function PublicMap() {
             backgroundColor: '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 12px 30px rgba(0,0,0,0.22)',
-            border: '1px solid #cbd5e1',
+            border: '1px solid #dcd3b8',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 40,
@@ -354,7 +354,7 @@ export default function PublicMap() {
             {/* Header */}
             <div style={{
               padding: '14px 18px',
-              backgroundColor: '#1e3a8a',
+              backgroundColor: '#4b5e28',
               color: '#ffffff',
               display: 'flex',
               justifyContent: 'space-between',
@@ -386,9 +386,9 @@ export default function PublicMap() {
             {/* Filter Toggle Bar */}
             <div style={{
               display: 'flex',
-              backgroundColor: '#f1f5f9',
+              backgroundColor: '#f3eddc',
               padding: '6px',
-              borderBottom: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e5dcbe',
               gap: '4px'
             }}>
               {[
@@ -406,7 +406,7 @@ export default function PublicMap() {
                     fontSize: '0.72rem',
                     fontWeight: activeFilter === tab.key ? 700 : 500,
                     backgroundColor: activeFilter === tab.key ? '#ffffff' : 'transparent',
-                    color: activeFilter === tab.key ? '#1e3a8a' : '#64748b',
+                    color: activeFilter === tab.key ? '#4b5e28' : '#5e6654',
                     borderRadius: '6px',
                     border: 'none',
                     boxShadow: activeFilter === tab.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -421,12 +421,12 @@ export default function PublicMap() {
             {/* Complaints List Body */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {drillLoading ? (
-                <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: '#5e6654' }}>
                   <div style={{ fontWeight: 600 }}>Loading ward complaints...</div>
                 </div>
               ) : drillComplaints.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
-                  <Info size={32} style={{ margin: '0 auto 8px auto', color: '#cbd5e1' }} />
+                  <Info size={32} style={{ margin: '0 auto 8px auto', color: '#dcd3b8' }} />
                   <div style={{ fontWeight: 600 }}>No {getFilterLabel(activeFilter).toLowerCase()} found for this ward.</div>
                 </div>
               ) : (
@@ -438,10 +438,10 @@ export default function PublicMap() {
                     <div 
                       key={c.id}
                       style={{
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid #e5dcbe',
                         borderRadius: '8px',
                         padding: '12px',
-                        backgroundColor: isExpanded ? '#f8fafc' : '#ffffff',
+                        backgroundColor: isExpanded ? '#fbf7ee' : '#ffffff',
                         transition: 'all 0.15s ease',
                         cursor: 'pointer'
                       }}
@@ -454,7 +454,7 @@ export default function PublicMap() {
                           height: '56px',
                           borderRadius: '6px',
                           overflow: 'hidden',
-                          backgroundColor: '#0f172a',
+                          backgroundColor: '#1f241a',
                           flexShrink: 0
                         }}>
                           <img 
@@ -467,7 +467,7 @@ export default function PublicMap() {
                         {/* Title & Metadata */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e3a8a' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#4b5e28' }}>
                               {c.complaint_code}
                             </span>
                             <span className={`badge badge-priority-${c.priority}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
@@ -479,7 +479,7 @@ export default function PublicMap() {
                             {c.category_name}
                           </div>
 
-                          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#5e6654', marginTop: '3px' }}>
                             🕒 {formatDateTime(c.created_at)}
                           </div>
                         </div>
@@ -490,7 +490,7 @@ export default function PublicMap() {
                         <div style={{
                           marginTop: '8px',
                           padding: '4px 8px',
-                          backgroundColor: '#fef3c7',
+                          backgroundColor: '#f7efd2',
                           border: '1px solid #fde68a',
                           borderRadius: '4px',
                           fontSize: '0.72rem',
@@ -535,7 +535,7 @@ export default function PublicMap() {
                         <div style={{
                           marginTop: '10px',
                           paddingTop: '10px',
-                          borderTop: '1px dashed #cbd5e1',
+                          borderTop: '1px dashed #dcd3b8',
                           fontSize: '0.75rem',
                           color: '#475569'
                         }}>
@@ -551,7 +551,7 @@ export default function PublicMap() {
                           {c.sla_due_at && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                               <span>SLA Deadline:</span>
-                              <span style={{ fontWeight: 700, color: '#b45309' }}>{formatDateTime(c.sla_due_at)}</span>
+                              <span style={{ fontWeight: 700, color: '#8f6a20' }}>{formatDateTime(c.sla_due_at)}</span>
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>

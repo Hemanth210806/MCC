@@ -1,17 +1,17 @@
 /* Leaflet CSS imported in main.jsx */
 
 :root {
-  --primary: #1e3a8a;
-  --primary-hover: #172554;
-  --primary-light: #eff6ff;
-  --gold: #b45309;
-  --gold-light: #fef3c7;
-  --accent: #0d9488;
-  --bg-main: #f8fafc;
+  --primary: #4b5e28;
+  --primary-hover: #3c4c1f;
+  --primary-light: #edf4e4;
+  --gold: #8f6a20;
+  --gold-light: #f7efd2;
+  --accent: #557a68;
+  --bg-main: #fbf7ee;
   --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
+  --text-main: #1f241a;
+  --text-muted: #5e6654;
+  --border: #e5dcbe;
   --radius: 12px;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
@@ -66,17 +66,17 @@ button {
 }
 
 /* Status Badges */
-.badge-SUBMITTED { background-color: #f1f5f9; color: #475569; }
-.badge-ASSIGNED { background-color: #dbeafe; color: #1e40af; }
-.badge-IN_PROGRESS { background-color: #fef3c7; color: #92400e; }
-.badge-VERIFICATION_PENDING { background-color: #f3e8ff; color: #6b21a8; }
-.badge-RESOLVED { background-color: #dcfce7; color: #166534; }
+.badge-SUBMITTED { background-color: #f3eddc; color: #475569; }
+.badge-ASSIGNED { background-color: #edf4e4; color: #3c4c1f; }
+.badge-IN_PROGRESS { background-color: #f7efd2; color: #92400e; }
+.badge-VERIFICATION_PENDING { background-color: #f3ead7; color: #806f38; }
+.badge-RESOLVED { background-color: #edf7e7; color: #166534; }
 .badge-REOPENED { background-color: #fee2e2; color: #991b1b; }
 .badge-OVERDUE { background-color: #ffe4e6; color: #be123c; border: 1px solid #f43f5e; }
 
 /* Priority Badges */
 .badge-priority-HIGH { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-.badge-priority-MEDIUM { background-color: #fef3c7; color: #b45309; }
+.badge-priority-MEDIUM { background-color: #f7efd2; color: #8f6a20; }
 .badge-priority-LOW { background-color: #ecfdf5; color: #047857; }
 
 /* Custom Leaflet Map styling */
@@ -126,7 +126,7 @@ button {
 .form-input:focus, .form-textarea:focus, .form-select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+  box-shadow: 0 0 0 3px rgba(75, 94, 40, 0.15);
 }
 
 /* Card Component */
@@ -165,11 +165,11 @@ button {
 }
 
 .btn-gold {
-  background: #d97706;
+  background: #b38328;
   color: #ffffff;
 }
 .btn-gold:hover {
-  background: #b45309;
+  background: #8f6a20;
 }
 
 .btn-outline {
@@ -178,8 +178,8 @@ button {
   color: var(--text-main);
 }
 .btn-outline:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: #f3eddc;
+  border-color: #dcd3b8;
 }
 
 .btn-success {

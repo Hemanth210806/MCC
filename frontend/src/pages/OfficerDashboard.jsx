@@ -143,10 +143,10 @@ export default function OfficerDashboard({ workerMode = false }) {
     <div className="container" style={{ padding: '30px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0d9488' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#557a68' }}>
             {workerMode ? 'WARD WORKER QUEUE' : 'DEPARTMENT DISPATCH QUEUE'}
           </span>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1f241a' }}>
             {workerMode ? 'My Assigned Complaints' : `${user?.department_name || 'Department'} Action Board`}
           </h2>
         </div>
@@ -182,9 +182,9 @@ export default function OfficerDashboard({ workerMode = false }) {
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading complaints...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: '#5e6654' }}>Loading complaints...</div>
       ) : complaints.length === 0 ? (
-        <div className="card" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+        <div className="card" style={{ padding: '40px', textAlign: 'center', color: '#5e6654' }}>
           No complaints matching the selected filters.
         </div>
       ) : (
@@ -235,7 +235,7 @@ export default function OfficerDashboard({ workerMode = false }) {
         }}>
           <div className="card" style={{ maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1f241a' }}>
                 Submit Resolution Proof: {selectedComplaint.complaint_code}
               </h3>
               <button 
@@ -252,14 +252,14 @@ export default function OfficerDashboard({ workerMode = false }) {
               </div>
             )}
 
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.8rem' }}>
+            <div style={{ backgroundColor: '#fbf7ee', border: '1px solid #e5dcbe', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: '#64748b' }}>📅 <strong>Registered Date & Time:</strong></span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>{formatDateTime(selectedComplaint.created_at)}</span>
+                <span style={{ color: '#5e6654' }}>📅 <strong>Registered Date & Time:</strong></span>
+                <span style={{ fontWeight: 700, color: '#1f241a' }}>{formatDateTime(selectedComplaint.created_at)}</span>
               </div>
               {selectedComplaint.sla_due_at && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: selectedComplaint.status === 'OVERDUE' ? '#dc2626' : '#64748b' }}>⏰ <strong>SLA Target Deadline:</strong></span>
+                  <span style={{ color: selectedComplaint.status === 'OVERDUE' ? '#dc2626' : '#5e6654' }}>⏰ <strong>SLA Target Deadline:</strong></span>
                   <span style={{ fontWeight: 700, color: selectedComplaint.status === 'OVERDUE' ? '#dc2626' : '#0369a1' }}>{formatDateTime(selectedComplaint.sla_due_at)}</span>
                 </div>
               )}
@@ -276,10 +276,10 @@ export default function OfficerDashboard({ workerMode = false }) {
                 ) : (
                   <div 
                     onClick={() => document.getElementById('res-photo-input').click()}
-                    style={{ border: '2px dashed #cbd5e1', padding: '24px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#f8fafc' }}
+                    style={{ border: '2px dashed #dcd3b8', padding: '24px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#fbf7ee' }}
                   >
                     <Upload size={28} style={{ color: '#94a3b8', margin: '0 auto 6px auto' }} />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a8a' }}>Upload Completed Work Photo</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4b5e28' }}>Upload Completed Work Photo</div>
                   </div>
                 )}
                 <input
@@ -318,7 +318,7 @@ export default function OfficerDashboard({ workerMode = false }) {
                     placeholder="Longitude" 
                   />
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#5e6654', marginTop: '4px' }}>
                   Original Issue GPS: {selectedComplaint.latitude.toFixed(4)}, {selectedComplaint.longitude.toFixed(4)}
                 </div>
               </div>

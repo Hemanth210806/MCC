@@ -38,13 +38,13 @@ export default function CorporatorDashboard() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8f6a20' }}>
             ELECTED REPRESENTATIVE PORTAL
           </span>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1f241a' }}>
             {user?.ward_name ? `Ward ${user?.ward_name}` : 'Ward Corporator Oversight'}
           </h2>
-          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+          <div style={{ fontSize: '0.85rem', color: '#5e6654' }}>
             Corporator: <strong>{user?.name}</strong> • Real-Time Civic Health & Alerts
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function CorporatorDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
           {/* Main Health Score */}
           <div className="card" style={{ borderLeft: `5px solid ${analytics.health_score < 60 ? '#dc2626' : '#16a34a'}` }}>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Ward Civic Health Score</div>
+            <div style={{ fontSize: '0.78rem', color: '#5e6654', fontWeight: 600 }}>Ward Civic Health Score</div>
             <div style={{ fontSize: '2.2rem', fontWeight: 900, color: analytics.health_score < 60 ? '#dc2626' : '#16a34a', margin: '4px 0' }}>
               {analytics.health_score} <span style={{ fontSize: '1rem', fontWeight: 600 }}>/ 100</span>
             </div>
@@ -83,31 +83,31 @@ export default function CorporatorDashboard() {
           </div>
 
           <div className="card">
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Resolution Rate</div>
+            <div style={{ fontSize: '0.78rem', color: '#5e6654', fontWeight: 600 }}>Resolution Rate</div>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#16a34a', margin: '4px 0' }}>
               {analytics.factors?.resolution_rate_pct || 0}%
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.75rem', color: '#5e6654' }}>
               {analytics.factors?.resolved_count || 0} of {analytics.factors?.total_complaints || 0} issues resolved
             </div>
           </div>
 
           <div className="card">
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SLA Overdue Issues</div>
+            <div style={{ fontSize: '0.78rem', color: '#5e6654', fontWeight: 600 }}>SLA Overdue Issues</div>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: analytics.factors?.overdue_count > 0 ? '#dc2626' : '#16a34a', margin: '4px 0' }}>
               {analytics.factors?.overdue_count || 0}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.75rem', color: '#5e6654' }}>
               Requires department escalation
             </div>
           </div>
 
           <div className="card">
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>High Priority Pending</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#b45309', margin: '4px 0' }}>
+            <div style={{ fontSize: '0.78rem', color: '#5e6654', fontWeight: 600 }}>High Priority Pending</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#8f6a20', margin: '4px 0' }}>
               {analytics.factors?.high_priority_pending || 0}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.75rem', color: '#5e6654' }}>
               Near schools / hospitals / transit
             </div>
           </div>
@@ -117,7 +117,7 @@ export default function CorporatorDashboard() {
       {/* Tab Content */}
       {activeTab === 'complaints' ? (
         <div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1f241a', marginBottom: '16px' }}>
             Ward Civic Issues
           </h3>
           {loading ? (
@@ -132,22 +132,22 @@ export default function CorporatorDashboard() {
         </div>
       ) : (
         <div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1f241a', marginBottom: '16px' }}>
             Corporator Notifications & Alerts
           </h3>
           <div className="card" style={{ padding: '8px' }}>
             {notifications.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ padding: '30px', textAlign: 'center', color: '#5e6654' }}>
                 No unread notifications for your ward.
               </div>
             ) : (
               notifications.map((n) => (
-                <div key={n.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={n.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3eddc', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#f7efd2', color: '#8f6a20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bell size={18} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500 }}>
+                    <div style={{ fontSize: '0.9rem', color: '#1f241a', fontWeight: 500 }}>
                       {n.message}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>

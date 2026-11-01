@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import PublicMap from './pages/PublicMap';
@@ -53,7 +54,7 @@ function MainApp() {
 
       {/* Government Footer */}
       <footer style={{
-        backgroundColor: '#0f172a',
+        backgroundColor: '#1f241a',
         color: '#94a3b8',
         padding: '30px 20px',
         borderTop: '1px solid #1e293b',
@@ -80,8 +81,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

@@ -1,277 +1,896 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, ShieldAlert, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { 
+  Lock, 
+  Mail, 
+  ShieldAlert, 
+  ArrowRight, 
+  CheckCircle2, 
+  Sparkles, 
+  Eye, 
+  EyeOff, 
+  UserCheck, 
+  Building2, 
+  Zap, 
+  Compass, 
+  LogOut,
+  ChevronRight,
+  Shield
+} from 'lucide-react';
 
 export default function Login({ setActivePage }) {
-  const { login } = useAuth();
+  const { user, login, logout } = useAuth();
+  const { language, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const routeByRole = (role) => {
+    if (role === 'admin') setActivePage('admin-dashboard');
+    else if (role === 'field_officer') setActivePage('officer-dashboard');
+    else if (role === 'ward_worker') setActivePage('worker-dashboard');
+    else if (role === 'corporator') setActivePage('corporator-dashboard');
+    else setActivePage('home');
+  };
+
+  const doLogin = async (targetEmail, targetPass) => {
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     try {
-      const user = await login(email, password);
-      if (user.role === 'admin') setActivePage('admin-dashboard');
-      else if (user.role === 'field_officer') setActivePage('officer-dashboard');
-      else if (user.role === 'ward_worker') setActivePage('worker-dashboard');
-      else if (user.role === 'corporator') setActivePage('corporator-dashboard');
-      else setActivePage('home');
+      const loggedUser = await login(targetEmail, targetPass);
+      const welcomeText = language === 'kn'
+        ? `ಸ್ವಾಗತ, ${loggedUser.name}! ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ.`
+        : `Welcome, ${loggedUser.name}! Login verified successfully.`;
+      setSuccessMsg(welcomeText);
+      setTimeout(() => {
+        routeByRole(loggedUser.role);
+      }, 450);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Invalid email or password');
-    } finally {
+      const msg = err.response?.data?.error || (language === 'kn' ? 'ತಪ್ಪಾದ ಇಮೇಲ್ ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್. ದಯವಿಟ್ಟು ಡೆಮೊ ಖಾತೆ ಬಳಸಿ.' : 'Invalid email or password. Please use official MCC credentials.');
+      setErrorMsg(msg);
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = (demoEmail, demoPass) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    doLogin(email, password);
+  };
+
+  const handlePreFill = (demoEmail, demoPass) => {
     setEmail(demoEmail);
     setPassword(demoPass);
+    setErrorMsg('');
+  };
+
+  const handleInstantLogin = (demoEmail, demoPass) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    doLogin(demoEmail, demoPass);
   };
 
   return (
-    <div className="container" style={{ padding: '60px 20px', maxWidth: '520px' }}>
-      <div className="card" style={{ padding: '32px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+    <div style={{ backgroundColor: '#fbf7ee', minHeight: '100vh', padding: '50px 16px', color: '#1f241a' }}>
+      <div className="container" style={{ maxWidth: '640px' }}>
+
+        {/* If user is ALREADY logged in, show clear Active Session state */}
+        {user ? (
+          <div className="card" style={{
+            padding: '32px',
+            backgroundColor: '#ffffff',
+            borderColor: '#b8df9c',
+            boxShadow: '0 6px 24px rgba(75, 94, 40, 0.12)',
+            marginBottom: '28px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+              <div style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                backgroundColor: '#edf4e4',
+                color: '#4b5e28',
+                border: '2px solid #4b5e28',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <UserCheck size={28} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#4b5e28', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {t('active_session')}
+                </span>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1f241a', margin: '2px 0' }}>
+                  {user.name}
+                </h3>
+                <div style={{ fontSize: '0.84rem', color: '#5e6654', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span>{user.email}</span>
+                  <span>•</span>
+                  <strong style={{ color: '#b38328' }}>{user.department_name || (user.ward_name ? `Ward: ${user.ward_name}` : user.role)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => routeByRole(user.role)}
+                className="btn btn-olive"
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  fontSize: '0.94rem',
+                  fontWeight: 800,
+                  backgroundColor: '#4b5e28',
+                  color: '#ffffff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>{t('go_to_dashboard')}</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                onClick={logout}
+                className="btn btn-outline"
+                style={{
+                  padding: '12px 18px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  borderColor: '#fca5a5',
+                  color: '#b91c1c',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <LogOut size={16} /> {t('switch_account')}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Main Login Form Card */}
+        <div className="card" style={{
+          padding: '36px',
+          backgroundColor: '#ffffff',
+          borderColor: '#e5dcbe',
+          boxShadow: '0 4px 24px rgba(75, 94, 40, 0.08)'
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '26px' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #4b5e28, #b38328)',
+              color: '#ffffff',
+              border: '2px solid #d4af37',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 14px auto',
+              boxShadow: '0 4px 12px rgba(75, 94, 40, 0.25)'
+            }}>
+              <Lock size={28} />
+            </div>
+            <h2 style={{ fontSize: '1.7rem', fontWeight: 800, color: '#1f241a', letterSpacing: '-0.02em' }}>
+              {t('staff_portal_title')}
+            </h2>
+            <p style={{ color: '#5e6654', fontSize: '0.86rem', marginTop: '4px' }}>
+              {t('staff_portal_desc')}
+            </p>
+          </div>
+
+          {/* Success Banner */}
+          {successMsg && (
+            <div style={{
+              backgroundColor: '#f0fdf4',
+              border: '1.5px solid #86efac',
+              color: '#166534',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '0.88rem',
+              fontWeight: 600,
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <CheckCircle2 size={18} color="#16a34a" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {errorMsg && (
+            <div style={{
+              backgroundColor: '#fef2f2',
+              border: '1.5px solid #fca5a5',
+              color: '#b91c1c',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <ShieldAlert size={18} color="#dc2626" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="form-label" style={{ color: '#3f4738', fontWeight: 700, fontSize: '0.85rem' }}>
+                {language === 'kn' ? 'ಅಧಿಕೃತ ಇಮೇಲ್ ಅಥವಾ ಸಿಬ್ಬಂದಿ ಗುರುತು (ID / Alias)' : 'Official Email / Staff ID'}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. admin@mcc.gov.in, engineer..."
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    padding: '12px 14px',
+                    fontSize: '0.94rem',
+                    borderRadius: '8px',
+                    borderColor: '#dcd1b5'
+                  }}
+                />
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#5e6654', marginTop: '4px' }}>
+                {language === 'kn' ? 'ಮಾಲೀಕರು & ಅಡ್ಮಿನ್: hemanth, owner, admin, engineer, swm, elec, water, corporator' : 'Owner & Staff aliases: hemanth, owner, admin, engineer, swm, elec, water, corporator'}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ color: '#3f4738', fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>
+                  {language === 'kn' ? 'ಪಾಸ್‌ವರ್ಡ್' : 'Password'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '0.76rem',
+                    color: '#4b5e28',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: 700
+                  }}
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  <span>{showPassword ? (language === 'kn' ? 'ಮರೆಮಾಡಿ' : 'Hide') : (language === 'kn' ? 'ತೋರಿಸಿ' : 'Show')}</span>
+                </button>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  className="form-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{
+                    padding: '12px 14px',
+                    fontSize: '0.94rem',
+                    borderRadius: '8px',
+                    borderColor: '#dcd1b5'
+                  }}
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="btn btn-olive"
+              style={{
+                width: '100%',
+                padding: '13px',
+                fontSize: '1rem',
+                fontWeight: 800,
+                backgroundColor: '#4b5e28',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(75, 94, 40, 0.2)'
+              }}
+            >
+              {loading 
+                ? (language === 'kn' ? 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...' : 'Authenticating...') 
+                : (language === 'kn' ? 'ಪೋರ್ಟಲ್‌ಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ' : 'Sign In to Portal')}
+            </button>
+          </form>
+
+          {/* Security Email Dispatch Notice */}
           <div style={{
-            width: '54px',
-            height: '54px',
-            borderRadius: '50%',
-            backgroundColor: '#dbeafe',
-            color: '#1e3a8a',
+            marginTop: '20px',
+            padding: '10px 14px',
+            backgroundColor: '#fbf7ed',
+            border: '1px solid #d4af37',
+            borderRadius: '8px',
+            fontSize: '0.76rem',
+            color: '#634e14',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 12px auto'
+            gap: '8px'
           }}>
-            <Lock size={26} />
-          </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-            Staff Access Portal
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
-            Mysuru City Corporation Official Authentication
-          </p>
-        </div>
-
-        {errorMsg && (
-          <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Official Email</label>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="email"
-                required
-                className="form-input"
-                placeholder="name@mcc.gov.in"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+            <Shield size={16} color="#b38328" style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Security Protocol:</strong> Login authentication alerts and security logs are recorded by the MCC system.
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input 
-              type="password"
-              required
-              className="form-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '12px', fontSize: '1rem', marginTop: '6px' }}
-          >
-            {loading ? 'Authenticating...' : 'Sign In to Portal'}
-          </button>
-        </form>
-
-        {/* 1-Click Demo Credentials Quick Fill */}
-        <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '18px' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Quick Demo Fill (1-Click Login):
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginTop: '2px' }}>
-              Agrahara ward workers
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {[
-                ['🛣️ Roads Worker', 'agrahara_road@mcc.gov.in'],
-                ['🗑️ Waste Worker', 'agrahara_waste@mcc.gov.in'],
-                ['💡 Streetlight Worker', 'agrahara_street@mcc.gov.in'],
-                ['💧 Water Worker', 'agrahara_water@mcc.gov.in'],
-              ].map(([label, demoEmail]) => (
-                <button
-                  key={demoEmail}
-                  type="button"
-                  onClick={() => handleQuickLogin(demoEmail, 'Worker@123')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '8px 10px',
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    textAlign: 'left'
-                  }}
-                >
-                  <strong style={{ color: '#1e3a8a' }}>{label}</strong>
-                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{demoEmail}</div>
-                </button>
-              ))}
+          {/* 1-Click Instant Login Cards */}
+          <div style={{ marginTop: '24px', borderTop: '1.5px solid #e8dfc9', paddingTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#4b5e28', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {language === 'kn' ? '⚡ ೧-ಕ್ಲಿಕ್ ತ್ವರಿತ ಲಾಗಿನ್ ಖಾತೆಗಳು' : '⚡ 1-Click Instant Staff Access'}
+                </span>
+                <div style={{ fontSize: '0.74rem', color: '#5e6654', marginTop: '2px' }}>
+                  {language === 'kn' ? 'ಯಾವುದೇ ಖಾತೆಯನ್ನು ಕ್ಲಿಕ್ ಮಾಡಿ ತಕ್ಷಣ ಲಾಗಿನ್ ಆಗಿ' : 'Click "⚡ Instant" to log in directly to that staff role'}
+                </div>
+              </div>
             </div>
 
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginTop: '8px' }}>
-              Vidyaranyapuram ward workers
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {[
-                ['🛣️ Roads Worker', 'vidyaranyapuram_road@mcc.gov.in'],
-                ['🗑️ Waste Worker', 'vidyaranyapuram_waste@mcc.gov.in'],
-                ['💡 Streetlight Worker', 'vidyaranyapuram_street@mcc.gov.in'],
-                ['💧 Water Worker', 'vidyaranyapuram_water@mcc.gov.in'],
-              ].map(([label, demoEmail]) => (
-                <button
-                  key={demoEmail}
-                  type="button"
-                  onClick={() => handleQuickLogin(demoEmail, 'Worker@123')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '8px 10px',
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    textAlign: 'left'
-                  }}
-                >
-                  <strong style={{ color: '#1e3a8a' }}>{label}</strong>
-                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{demoEmail}</div>
-                </button>
-              ))}
-            </div>
-
-            <button 
-              type="button"
-              onClick={() => handleQuickLogin('admin@mcc.gov.in', 'Admin@123')}
-              style={{
+            {/* List of Pre-Seeded Staff Roles */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
+              {/* Central Administrator Card */}
+              <div style={{
+                padding: '12px 14px',
+                backgroundColor: '#fbf8f0',
+                border: '1.5px solid #d4af37',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '8px 12px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '0.82rem',
-                textAlign: 'left'
-              }}
-            >
-              <div>
-                <strong style={{ color: '#1e3a8a' }}>Administrator</strong>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>admin@mcc.gov.in</div>
+                gap: '12px',
+                boxShadow: '0 1px 4px rgba(212, 175, 55, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    backgroundColor: '#d4af37',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.9rem'
+                  }}>
+                    🏛️
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#8c6b16' }}>
+                      MCC Central Administrator
+                    </div>
+                    <div style={{ fontSize: '0.73rem', color: '#5e6654' }}>
+                      admin@mcc.gov.in • City oversight & verification
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantLogin('admin@mcc.gov.in', 'Admin@123')}
+                    disabled={loading}
+                    className="btn btn-olive"
+                    style={{
+                      padding: '7px 12px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      backgroundColor: '#4b5e28',
+                      color: '#ffffff'
+                    }}
+                  >
+                    ⚡ Instant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePreFill('admin@mcc.gov.in', 'Admin@123')}
+                    className="btn btn-outline"
+                    style={{
+                      padding: '7px 10px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      backgroundColor: '#ffffff',
+                      borderColor: '#dcd1b5',
+                      color: '#4b5e28'
+                    }}
+                  >
+                    Fill
+                  </button>
+                </div>
               </div>
-              <span className="badge badge-ASSIGNED" style={{ fontSize: '0.65rem' }}>Admin</span>
-            </button>
 
-            {/* 4 Department Field Officers */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button 
-                type="button"
-                onClick={() => handleQuickLogin('roads.officer@mcc.gov.in', 'Officer@123')}
-                style={{
+              {/* Department Officers Grid */}
+              <div style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: '#5e6654',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginTop: '6px',
+                marginBottom: '2px'
+              }}>
+                {language === 'kn' ? 'ಕ್ಷೇತ್ರ ಇಂಜಿನಿಯರ್‌ಗಳು & ಇಲಾಖಾ ಅಧಿಕಾರಿಗಳು' : 'Department Field Officers & Engineers'}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                
+                {/* Roads Officer */}
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: '8px 10px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  textAlign: 'left'
-                }}
-              >
-                <strong style={{ color: '#0d9488' }}>🛣️ Roads & Potholes</strong>
-                <div style={{ fontSize: '0.70rem', color: '#64748b' }}>roads.officer@mcc.gov.in</div>
-              </button>
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#3e4e21', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🛣️</span>
+                      <span>Roads & Civil (EE)</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      roads.officer@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('roads.officer@mcc.gov.in', 'Officer@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#4b5e28',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('roads.officer@mcc.gov.in', 'Officer@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#4b5e28'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
 
-              <button 
-                type="button"
-                onClick={() => handleQuickLogin('swm.officer@mcc.gov.in', 'Officer@123')}
-                style={{
+                {/* SWM Officer */}
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: '8px 10px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  textAlign: 'left'
-                }}
-              >
-                <strong style={{ color: '#16a34a' }}>🗑️ Waste / SWM</strong>
-                <div style={{ fontSize: '0.70rem', color: '#64748b' }}>swm.officer@mcc.gov.in</div>
-              </button>
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#3e4e21', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🗑️</span>
+                      <span>Health & SWM</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      swm.officer@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('swm.officer@mcc.gov.in', 'Officer@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#4b5e28',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('swm.officer@mcc.gov.in', 'Officer@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#4b5e28'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
 
-              <button 
-                type="button"
-                onClick={() => handleQuickLogin('elec.officer@mcc.gov.in', 'Officer@123')}
-                style={{
+                {/* Electrical Officer */}
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: '8px 10px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  textAlign: 'left'
-                }}
-              >
-                <strong style={{ color: '#d97706' }}>💡 Streetlights</strong>
-                <div style={{ fontSize: '0.70rem', color: '#64748b' }}>elec.officer@mcc.gov.in</div>
-              </button>
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#8c6b16', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>💡</span>
+                      <span>Lighting & Elec (AEE)</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      elec.officer@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('elec.officer@mcc.gov.in', 'Officer@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#4b5e28',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('elec.officer@mcc.gov.in', 'Officer@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#4b5e28'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
 
+                {/* Water Supply Officer */}
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#8c6b16', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>💧</span>
+                      <span>Water & Drainage (AEE)</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      water.officer@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('water.officer@mcc.gov.in', 'Officer@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#4b5e28',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('water.officer@mcc.gov.in', 'Officer@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#4b5e28'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Featured ward department workers */}
+              <div style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: '#5e6654',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginTop: '8px',
+                marginBottom: '2px'
+              }}>
+                {language === 'kn' ? 'ವಾರ್ಡ್ ಇಲಾಖಾ ಸಿಬ್ಬಂದಿ ಲಾಗಿನ್' : 'Ward Department Staff Access'}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { ward: 'Agrahara', slug: 'agrahara', icon: '🏛️' },
+                  { ward: 'Vidyaranyapuram', slug: 'vidyaranyapuram', icon: '🏘️' }
+                ].map((ward) => (
+                  <React.Fragment key={ward.slug}>
+                    {[
+                      { label: 'Waste Management', slug: 'waste', icon: '🗑️' },
+                      { label: 'Pothole & Roads', slug: 'road', icon: '🛣️' },
+                      { label: 'Streetlight', slug: 'street', icon: '💡' },
+                      { label: 'Water Leakage', slug: 'water', icon: '💧' }
+                    ].map((department) => {
+                      const accountEmail = `${ward.slug}_${department.slug}@mcc.gov.in`;
+                      return (
+                        <div key={accountEmail} style={{
+                          padding: '10px 12px',
+                          backgroundColor: '#fcfaf4',
+                          border: '1.5px solid #e5dcbe',
+                          borderRadius: '9px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '8px'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#3e4e21', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>{department.icon}</span>
+                              <span>{ward.ward} {department.label}</span>
+                            </div>
+                            <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                              {accountEmail}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleInstantLogin(accountEmail, 'Worker@123')}
+                              disabled={loading}
+                              style={{
+                                flex: 1,
+                                padding: '6px 8px',
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                backgroundColor: '#4b5e28',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ⚡ Instant
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePreFill(accountEmail, 'Worker@123')}
+                              style={{
+                                padding: '6px 8px',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #dcd1b5',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                color: '#4b5e28'
+                              }}
+                            >
+                              Fill
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Elected Corporators */}
+              <div style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: '#5e6654',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginTop: '8px',
+                marginBottom: '2px'
+              }}>
+                {language === 'kn' ? 'ಚುನಾಯಿತ ಜನಪ್ರತಿನಿಧಿಗಳು (ಕಾರ್ಪೊರೇಟರ್‌ಗಳು)' : 'Elected Ward Representatives (Corporators)'}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#8c6b16', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🏛️</span>
+                      <span>Ward 1 (Agrahara)</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      ward1.corporator@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('ward1.corporator@mcc.gov.in', 'Corporator@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#b38328',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('ward1.corporator@mcc.gov.in', 'Corporator@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#8c6b16'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: '#fcfaf4',
+                  border: '1.5px solid #e5dcbe',
+                  borderRadius: '9px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#8c6b16', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🏛️</span>
+                      <span>Ward 12 (J P Nagar)</span>
+                    </div>
+                    <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                      ward12.corporator@mcc.gov.in
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('ward12.corporator@mcc.gov.in', 'Corporator@123')}
+                      disabled={loading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        backgroundColor: '#b38328',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Instant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreFill('ward12.corporator@mcc.gov.in', 'Corporator@123')}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #dcd1b5',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        color: '#8c6b16'
+                      }}
+                    >
+                      Fill
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <button 
-              type="button"
-              onClick={() => handleQuickLogin('ward1.corporator@mcc.gov.in', 'Corporator@123')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '0.82rem',
-                textAlign: 'left'
-              }}
-            >
-              <div>
-                <strong style={{ color: '#b45309' }}>Corporator (Ward 1 Hebballu – Lakshmikantha Nagara)</strong>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>ward1.corporator@mcc.gov.in</div>
-              </div>
-              <span className="badge badge-VERIFICATION_PENDING" style={{ fontSize: '0.65rem' }}>Corporator</span>
-            </button>
           </div>
         </div>
+
       </div>
     </div>
   );

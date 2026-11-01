@@ -255,21 +255,21 @@ export default function FileComplaint({ setActivePage }) {
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            backgroundColor: isMerged ? '#fef3c7' : '#dcfce7',
+            backgroundColor: isMerged ? '#f7efd2' : '#edf7e7',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px auto',
-            color: isMerged ? '#b45309' : '#166534'
+            color: isMerged ? '#8f6a20' : '#166534'
           }}>
             {isMerged ? <Layers size={36} /> : <CheckCircle2 size={36} />}
           </div>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1f241a' }}>
             {isMerged ? 'Report Merged with Existing Civic Issue!' : 'Complaint Successfully Registered!'}
           </h2>
           
-          <p style={{ color: '#64748b', fontSize: '0.95rem', marginTop: '6px' }}>
+          <p style={{ color: '#5e6654', fontSize: '0.95rem', marginTop: '6px' }}>
             {isMerged 
               ? 'An existing grievance was already open within 20 meters of this location. Your photo has been merged as supplementary angle evidence.'
               : 'Your civic report has been classified, prioritized, and dispatched to MCC.'
@@ -305,31 +305,31 @@ export default function FileComplaint({ setActivePage }) {
           )}
 
           {/* Reference Card */}
-          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', margin: '24px 0', textAlign: 'left' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Complaint ID:</span>
-              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e3a8a' }}>{successResult.complaint_code}</span>
+          <div style={{ backgroundColor: '#fbf7ee', border: '1px solid #e5dcbe', borderRadius: '10px', padding: '20px', margin: '24px 0', textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #e5dcbe', paddingBottom: '10px' }}>
+              <span style={{ fontSize: '0.85rem', color: '#5e6654', fontWeight: 600 }}>Complaint ID:</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4b5e28' }}>{successResult.complaint_code}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Assigned Ward:</span>
+              <span style={{ fontSize: '0.85rem', color: '#5e6654' }}>Assigned Ward:</span>
               <span style={{ fontWeight: 700 }}>{successResult.ward_name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Category:</span>
+              <span style={{ fontSize: '0.85rem', color: '#5e6654' }}>Category:</span>
               <span style={{ fontWeight: 700 }}>{successResult.category_name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Priority:</span>
+              <span style={{ fontSize: '0.85rem', color: '#5e6654' }}>Priority:</span>
               <span className={`badge badge-priority-${successResult.priority}`}>{successResult.priority}</span>
             </div>
             {successResult.sla_due_at && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>SLA Target:</span>
-                <span style={{ fontWeight: 700, color: '#b45309' }}>{formatDateTime(successResult.sla_due_at)}</span>
+                <span style={{ fontSize: '0.85rem', color: '#5e6654' }}>SLA Target:</span>
+                <span style={{ fontWeight: 700, color: '#8f6a20' }}>{formatDateTime(successResult.sla_due_at)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Registered Timestamp:</span>
+              <span style={{ fontSize: '0.85rem', color: '#5e6654' }}>Registered Timestamp:</span>
               <span style={{ fontWeight: 600, color: '#475569' }}>{formatDateTime(new Date().toISOString())}</span>
             </div>
           </div>
@@ -364,10 +364,10 @@ export default function FileComplaint({ setActivePage }) {
   return (
     <div className="container" style={{ padding: '40px 20px', maxWidth: '1000px' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a' }}>
+        <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1f241a' }}>
           Report a Civic Issue
         </h2>
-        <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
+        <p style={{ color: '#5e6654', fontSize: '0.95rem' }}>
           Upload a photo and share your GPS location. No mandatory registration required.
         </p>
       </div>
@@ -395,12 +395,12 @@ export default function FileComplaint({ setActivePage }) {
           {/* Photo Upload Box */}
           <div className="card">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Camera size={18} style={{ color: '#1e3a8a' }} /> Issue Photograph (Required)
+              <Camera size={18} style={{ color: '#4b5e28' }} /> Issue Photograph (Required)
             </label>
 
             {photoPreview ? (
               <div>
-                <div style={{ position: 'relative', height: '230px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0f172a' }}>
+                <div style={{ position: 'relative', height: '230px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#1f241a' }}>
                   <img 
                     src={photoPreview} 
                     alt="Issue Preview" 
@@ -447,9 +447,9 @@ export default function FileComplaint({ setActivePage }) {
                     marginTop: '10px',
                     padding: '8px 12px',
                     borderRadius: '6px',
-                    backgroundColor: exifBadge.type === 'exif' ? '#ecfdf5' : '#eff6ff',
+                    backgroundColor: exifBadge.type === 'exif' ? '#ecfdf5' : '#edf4e4',
                     border: `1px solid ${exifBadge.type === 'exif' ? '#a7f3d0' : '#bfdbfe'}`,
-                    color: exifBadge.type === 'exif' ? '#065f46' : '#1e40af',
+                    color: exifBadge.type === 'exif' ? '#065f46' : '#3c4c1f',
                     fontSize: '0.8rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -462,18 +462,18 @@ export default function FileComplaint({ setActivePage }) {
               </div>
             ) : (
               <div style={{
-                border: '2px dashed #cbd5e1',
+                border: '2px dashed #dcd3b8',
                 borderRadius: '8px',
                 padding: '30px 20px',
                 textAlign: 'center',
-                backgroundColor: '#f8fafc',
+                backgroundColor: '#fbf7ee',
                 cursor: 'pointer'
               }} onClick={() => document.getElementById('photo-input').click()}>
                 <Upload size={36} style={{ color: '#94a3b8', margin: '0 auto 10px auto' }} />
-                <div style={{ fontWeight: 600, color: '#1e3a8a', fontSize: '0.95rem' }}>
+                <div style={{ fontWeight: 600, color: '#4b5e28', fontSize: '0.95rem' }}>
                   Click to take or upload a photo
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#5e6654', marginTop: '4px' }}>
                   Auto-extracts camera EXIF geotag & applies official MCC banner
                 </div>
               </div>
@@ -490,7 +490,7 @@ export default function FileComplaint({ setActivePage }) {
 
           {/* Citizen Details */}
           <div className="card">
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f241a', marginBottom: '14px' }}>
               Description & Contact Details (Optional)
             </h4>
 
@@ -558,7 +558,7 @@ export default function FileComplaint({ setActivePage }) {
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MapPin size={18} style={{ color: '#1e3a8a' }} /> Issue Location & Ward Verification
+              <MapPin size={18} style={{ color: '#4b5e28' }} /> Issue Location & Ward Verification
             </label>
             <button
               type="button"
@@ -571,7 +571,7 @@ export default function FileComplaint({ setActivePage }) {
             </button>
           </div>
 
-          <div style={{ flex: 1, minHeight: '340px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+          <div style={{ flex: 1, minHeight: '340px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5dcbe' }}>
             <MapView 
               height="100%"
               center={[latitude, longitude]}
@@ -637,11 +637,11 @@ export default function FileComplaint({ setActivePage }) {
             </div>
           ) : null}
 
-          <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#5e6654', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>
               Lat: <strong>{latitude.toFixed(5)}</strong>, Lng: <strong>{longitude.toFixed(5)}</strong>
               {locationMode === 'manual' && (
-                <span style={{ marginLeft: '8px', color: '#2563eb', fontWeight: 600, backgroundColor: '#eff6ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                <span style={{ marginLeft: '8px', color: '#b38328', fontWeight: 600, backgroundColor: '#edf4e4', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
                   📌 Custom Pin
                 </span>
               )}

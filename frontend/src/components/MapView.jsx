@@ -16,7 +16,7 @@ const CATEGORY_COLORS = {
   'Streetlight Failure': '#8b5cf6'
 };
 
-const createPinIcon = (color = '#2563eb', size = 26) => {
+const createPinIcon = (color = '#b38328', size = 26) => {
   const markerHtml = `
     <div style="
       width:${size}px;
@@ -112,7 +112,7 @@ export default function MapView({
           fillColor: fillColor,
           weight: 1.5,
           opacity: 0.9,
-          color: '#1e3a8a',
+          color: '#4b5e28',
           fillOpacity: 0.25
         };
       },
@@ -120,7 +120,7 @@ export default function MapView({
         const p = feature.properties;
         const popupContent = `
           <div style="font-family: inherit; min-width: 190px;">
-            <div style="font-weight: 800; font-size: 0.95rem; color: #1e3a8a; margin-bottom: 4px;">
+            <div style="font-weight: 800; font-size: 0.95rem; color: #4b5e28; margin-bottom: 4px;">
               Ward ${p.ward_number}: ${p.ward_name}
             </div>
             <div style="font-size: 0.8rem; margin-bottom: 6px;">
@@ -129,7 +129,7 @@ export default function MapView({
                 ${p.health_score ?? 100} / 100 (${p.rating || 'EXCELLENT'})
               </span>
             </div>
-            <div style="font-size: 0.75rem; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+            <div style="font-size: 0.75rem; color: #475569; border-top: 1px solid #e5dcbe; padding-top: 4px;">
               <div>Total Reports: <strong>${p.total_complaints || 0}</strong></div>
               <div>Resolved: <strong style="color: #16a34a;">${p.resolved_count || 0}</strong></div>
               <div>Overdue: <strong style="color: #dc2626;">${p.overdue_count || 0}</strong></div>
@@ -203,7 +203,7 @@ export default function MapView({
             <strong>Ward:</strong> ${h.ward_name}<br/>
             <strong>Active Complaints:</strong> ${h.complaint_count}
           </div>
-          <div style="font-size: 0.72rem; color: #64748b;">
+          <div style="font-size: 0.72rem; color: #5e6654;">
             DBSCAN Spatial Cluster (${Math.round(h.radius_m)}m radius)
           </div>
         </div>
@@ -239,9 +239,9 @@ export default function MapView({
 
       marker.bindPopup(`
         <div style="font-family: inherit; font-size: 0.82rem;">
-          <div style="font-weight: 700; color: #0f172a;">${c.complaint_code}</div>
+          <div style="font-weight: 700; color: #1f241a;">${c.complaint_code}</div>
           <div style="color: ${color}; font-weight: 600;">${c.category_name}</div>
-          <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+          <div style="font-size: 0.75rem; color: #5e6654; margin-top: 4px;">
             Status: <strong>${c.status}</strong> | Priority: <strong>${c.priority}</strong>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function MapView({
           <div style={{
             width: '26px',
             height: '26px',
-            background: '#2563eb',
+            background: '#b38328',
             border: '3px solid white',
             borderRadius: '50% 50% 50% 0',
             transform: 'rotate(-45deg)',

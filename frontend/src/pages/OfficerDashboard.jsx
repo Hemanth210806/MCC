@@ -5,7 +5,7 @@ import api from '../services/api';
 import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter, Calendar } from 'lucide-react';
 import { formatDateTime, extractExifGps } from '../utils/exifHelper';
 
-export default function OfficerDashboard() {
+export default function OfficerDashboard({ workerMode = false }) {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,20 @@ export default function OfficerDashboard() {
       fetchComplaints();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to start work');
+    }
+  };
+
+  const handleProgress = async (complaint) => {
+    const value = window.prompt('Progress percentage (0-100):', String(complaint.progress_percent || 0));
+    if (value === null) return;
+    const note = window.prompt('Optional progress note:', complaint.progress_note || '');
+    try {
+      await api.patch(`/officer/complaints/${complaint.id}/progress`, {
+        progress_percent: Number(value), progress_note: note || ''
+      });
+      fetchComplaints();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update progress');
     }
   };
 
@@ -130,10 +144,10 @@ export default function OfficerDashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0d9488' }}>
-            DEPARTMENT DISPATCH QUEUE
+            {workerMode ? 'WARD WORKER QUEUE' : 'DEPARTMENT DISPATCH QUEUE'}
           </span>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
-            {user?.department_name || 'Department'} Action Board
+            {workerMode ? 'My Assigned Complaints' : `${user?.department_name || 'Department'} Action Board`}
           </h2>
         </div>
 
@@ -189,13 +203,14 @@ export default function OfficerDashboard() {
                   </button>
                 )}
                 {(c.status === 'IN_PROGRESS' || c.status === 'OVERDUE') && (
-                  <button 
-                    onClick={() => handleOpenResolveModal(c)}
-                    className="btn btn-success"
-                    style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}
-                  >
-                    <Camera size={15} /> Submit Resolution
-                  </button>
+                  <>
+                    <button onClick={() => handleProgress(c)} className="btn btn-outline" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>
+                      {c.progress_percent || 0}% Progress
+                    </button>
+                    <button onClick={() => handleOpenResolveModal(c)} className="btn btn-success" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>
+                      <Camera size={15} /> Submit Resolution
+                    </button>
+                  </>
                 )}
               </div>
             </div>

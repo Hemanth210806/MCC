@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function Navbar({ activePage, setActivePage }) {
-  const { user, logout, isAdmin, isOfficer, isCorporator } = useAuth();
+  const { user, logout, isAdmin, isOfficer, isWorker, isCorporator } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleNav = (page) => {
@@ -157,6 +157,19 @@ export default function Navbar({ activePage, setActivePage }) {
                 style={{ padding: '8px 14px', fontSize: '0.85rem' }}
               >
                 <CheckSquare size={16} /> Officer Queue
+              </button>
+            </>
+          )}
+
+          {isWorker && (
+            <>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1', margin: '0 4px' }} />
+              <button
+                onClick={() => handleNav('worker-dashboard')}
+                className={`btn ${activePage === 'worker-dashboard' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+              >
+                <CheckSquare size={16} /> My Ward Queue
               </button>
             </>
           )}

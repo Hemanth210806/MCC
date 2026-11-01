@@ -24,6 +24,12 @@ from app.services.routing_service import routing_service
 from app.services.sla_service import sla_service
 from app.services.recurring_service import recurring_service
 from app.services.hotspot_service import hotspot_service
+from app.services.worker_assignment import select_worker
+from seed.seed_data import (
+    ensure_demo_workers,
+    ensure_ward_department_workers,
+    worker_email_for,
+)
 from app.routes.auth import generate_jwt
 from ml.inference import CATEGORY_LABEL_MAP, normalize_label
 
@@ -41,7 +47,9 @@ def app():
 
         dept1 = Department(name="Solid Waste Management", description="Waste")
         dept2 = Department(name="Roads & Infrastructure", description="Roads")
-        db.session.add_all([dept1, dept2])
+        dept3 = Department(name="Electrical & Street Lighting", description="Electrical")
+        dept4 = Department(name="Water Supply & Sewerage", description="Water")
+        db.session.add_all([dept1, dept2, dept3, dept4])
         db.session.commit()
 
         cat1 = Category(name="Garbage / Waste", description="Garbage")
@@ -68,8 +76,11 @@ def app():
         admin.set_password("Pass@123")
         officer = User(name="Test Officer", email="officer.test@mcc.gov.in", role="field_officer", department_id=dept1.id)
         officer.set_password("Pass@123")
-        db.session.add_all([admin, officer])
+        worker = User(name="Test Ward Worker", email="worker.test@mcc.gov.in", role="ward_worker", department_id=dept1.id)
+        worker.set_password("Pass@123")
+        db.session.add_all([admin, officer, worker])
         db.session.commit()
+        ensure_ward_department_workers()
 
         yield app
 
@@ -166,6 +177,102 @@ def test_routing_service(app):
         dept = routing_service.get_department_for_category(cat_g.id)
         assert dept.name == "Solid Waste Management"
 
+def test_complaint_serializes_assigned_worker_phone(app):
+    with app.app_context():
+        worker = User.query.filter_by(email="worker.test@mcc.gov.in").first()
+        worker.phone = "9880099999"
+        complaint = Complaint(
+            complaint_code="MCC-2026-WORKER-PHONE",
+            latitude=12.30,
+            longitude=76.65,
+            assigned_worker=worker,
+        )
+        db.session.add(complaint)
+        db.session.commit()
+
+        data = complaint.to_dict()
+        assert data["assigned_worker_name"] == "Test Ward Worker"
+        assert data["assigned_worker_phone"] == "9880099999"
+
+def test_demo_workers_are_available_and_idempotent(app):
+    with app.app_context():
+        # Add the production-style dependencies to the minimal test database.
+        swm = Department.query.filter_by(name="Solid Waste Management").one()
+        roads = Department.query.filter_by(name="Roads & Infrastructure").one()
+        agrahara = Ward(ward_number=100, ward_name="Agrahara", geometry={"type": "Polygon", "coordinates": []})
+        vidyaranyapuram = Ward.query.filter_by(ward_name="Vidyaranyapuram").one()
+        db.session.add(agrahara)
+        db.session.commit()
+
+        ensure_demo_workers()
+        ensure_demo_workers()
+
+        agrahara_worker = User.query.filter_by(email="agrahara.worker@mcc.gov.in").one()
+        vidyaranyapuram_worker = User.query.filter_by(email="vidhya.worker@mcc.gov.in").one()
+        assert agrahara_worker.phone == "9880022102"
+        assert agrahara_worker.ward_id == agrahara.id
+        assert agrahara_worker.department_id == swm.id
+        assert vidyaranyapuram_worker.phone == "9880033102"
+        assert vidyaranyapuram_worker.ward_id == vidyaranyapuram.id
+        assert vidyaranyapuram_worker.department_id == roads.id
+        assert User.query.filter_by(email="agrahara.worker@mcc.gov.in").count() == 1
+
+def test_worker_assignment_prefers_free_nearby_worker_and_releases_resolved_worker(app):
+    with app.app_context():
+        department = Department.query.filter_by(name="Solid Waste Management").one()
+        source_ward = Ward.query.filter_by(ward_number=61).one()
+        nearby_ward = Ward.query.filter_by(ward_number=62).one()
+        source_ward.geometry = {
+            "type": "Polygon",
+            "coordinates": [[[76.64, 12.30], [76.65, 12.30], [76.65, 12.31], [76.64, 12.31], [76.64, 12.30]]],
+        }
+        nearby_ward.geometry = {
+            "type": "Polygon",
+            "coordinates": [[[76.65, 12.30], [76.66, 12.30], [76.66, 12.31], [76.65, 12.31], [76.65, 12.30]]],
+        }
+        db.session.commit()
+
+        source_worker = User.query.filter_by(
+            ward_id=source_ward.id, department_id=department.id, role="ward_worker"
+        ).one()
+        nearby_worker = User.query.filter_by(
+            ward_id=nearby_ward.id, department_id=department.id, role="ward_worker"
+        ).one()
+        busy_complaint = Complaint(
+            complaint_code="MCC-2026-BUSY-WORKER",
+            latitude=12.305,
+            longitude=76.645,
+            ward_id=source_ward.id,
+            department_id=department.id,
+            assigned_worker_id=source_worker.id,
+            status="IN_PROGRESS",
+        )
+        db.session.add(busy_complaint)
+        db.session.commit()
+
+        selected = select_worker(source_ward, department, 12.305, 76.645)
+        assert selected.id == nearby_worker.id
+
+        busy_complaint.status = "VERIFICATION_PENDING"
+        db.session.commit()
+        selected = select_worker(source_ward, department, 12.305, 76.645)
+        assert selected.id == source_worker.id
+
+        busy_complaint.status = "IN_PROGRESS"
+        nearby_complaint = Complaint(
+            complaint_code="MCC-2026-BUSY-NEARBY",
+            latitude=12.305,
+            longitude=76.655,
+            ward_id=nearby_ward.id,
+            department_id=department.id,
+            assigned_worker_id=nearby_worker.id,
+            status="IN_PROGRESS",
+        )
+        db.session.add(nearby_complaint)
+        db.session.commit()
+        selected = select_worker(source_ward, department, 12.305, 76.645)
+        assert selected.id == source_worker.id
+
 # ----------------- 5. SLA Due Date & Transition Tests -----------------
 def test_sla_due_date(app):
     with app.app_context():
@@ -242,6 +349,51 @@ def test_admin_can_access_admin_queue(client, app):
         res = client.get('/api/admin/verification-queue', headers={'Authorization': f'Bearer {token}'})
         assert res.status_code == 200
 
+def test_admin_assigns_worker_and_worker_updates_only_owned_complaint(client, app):
+    with app.app_context():
+        admin = User.query.filter_by(role='admin').first()
+        worker = User.query.filter_by(role='ward_worker').first()
+        dept = Department.query.first()
+        complaint = Complaint(
+            complaint_code='MCC-2026-WORKER', latitude=12.30, longitude=76.65,
+            department_id=dept.id, status='ASSIGNED', priority='MEDIUM'
+        )
+        db.session.add(complaint)
+        db.session.commit()
+        admin_token = generate_jwt(admin)
+        worker_token = generate_jwt(worker)
+        complaint_id = complaint.id
+
+    assigned = client.patch(
+        f'/api/admin/complaints/{complaint_id}/assign-worker',
+        json={'worker_id': worker.id},
+        headers={'Authorization': 'Bearer ' + admin_token}
+    )
+    assert assigned.status_code == 200
+
+    progress = client.patch(
+        f'/api/officer/complaints/{complaint_id}/progress',
+        json={'progress_percent': 40, 'progress_note': 'Crew dispatched'},
+        headers={'Authorization': 'Bearer ' + worker_token}
+    )
+    assert progress.status_code == 200
+    assert progress.get_json()['complaint']['progress_percent'] == 40
+
+    with app.app_context():
+        other = Complaint(
+            complaint_code='MCC-2026-NOT-OWNED', latitude=12.31, longitude=76.65,
+            department_id=Department.query.first().id, status='ASSIGNED'
+        )
+        db.session.add(other)
+        db.session.commit()
+        other_id = other.id
+    denied = client.patch(
+        f'/api/officer/complaints/{other_id}/progress',
+        json={'progress_percent': 10},
+        headers={'Authorization': 'Bearer ' + worker_token}
+    )
+    assert denied.status_code == 403
+
 # ----------------- 8. Same-Location Duplicate Merge Safety -----------------
 def test_same_location_report_updates_stale_road_damage_to_waste(client, app, monkeypatch):
     with app.app_context():
@@ -288,6 +440,65 @@ def test_same_location_report_updates_stale_road_damage_to_waste(client, app, mo
         updated = Complaint.query.filter_by(complaint_code='MCC-2026-EXISTING').first()
         assert updated.category.name == 'Garbage / Waste'
 
+def test_same_location_merge_keeps_existing_worker(client, app, monkeypatch):
+    with app.app_context():
+        ward = Ward.query.filter_by(ward_number=61).first()
+        department = Department.query.filter_by(name='Solid Waste Management').first()
+        worker = User.query.filter_by(
+            ward_id=ward.id,
+            department_id=department.id,
+            role='ward_worker',
+        ).first()
+        parent = Complaint(
+            complaint_code='MCC-2026-MERGE-WORKER',
+            category_id=Category.query.filter_by(name='Garbage / Waste').first().id,
+            ai_predicted_category_id=Category.query.filter_by(name='Garbage / Waste').first().id,
+            latitude=12.2785,
+            longitude=76.6520,
+            ward_id=ward.id,
+            department_id=department.id,
+            assigned_worker_id=worker.id,
+            assigned_at=datetime.utcnow(),
+            status='ASSIGNED',
+            report_count=1,
+        )
+        db.session.add(parent)
+        db.session.commit()
+        parent_id = parent.id
+        worker_id = worker.id
+
+    monkeypatch.setattr(
+        'app.services.classification_service.classification_service.classify_image',
+        lambda image_path: {
+            'category_name': 'Garbage_Waste',
+            'confidence': 0.94,
+            'low_confidence': False,
+            'status': 'CLASSIFIED',
+            'model_version': 'test',
+        },
+    )
+    img = io.BytesIO()
+    from PIL import Image
+    Image.new('RGB', (100, 100), color='blue').save(img, format='JPEG')
+    img.seek(0)
+
+    res = client.post(
+        '/api/complaints',
+        data={
+            'photo': (img, 'same_spot_worker.jpg'),
+            'latitude': '12.27855',
+            'longitude': '76.6520',
+        },
+        content_type='multipart/form-data',
+    )
+
+    assert res.status_code == 200
+    assert res.get_json()['merged'] is True
+    with app.app_context():
+        merged = Complaint.query.get(parent_id)
+        assert merged.assigned_worker_id == worker_id
+        assert merged.report_count == 2
+
 # ----------------- 9. Full Complaint Submission Flow -----------------
 def test_file_complaint_api(client, app):
     # Dummy test image
@@ -311,6 +522,13 @@ def test_file_complaint_api(client, app):
     assert json_data['category_name'] is not None
     assert json_data['priority'] in ('LOW', 'MEDIUM', 'HIGH')
     assert len(json_data['priority_reasons']) > 0
+    assert json_data['assigned_worker_name']
+    assert json_data['assigned_worker_phone']
+    with app.app_context():
+        created = Complaint.query.filter_by(complaint_code=json_data['complaint_code']).one()
+        assigned = User.query.get(created.assigned_worker_id)
+        assert assigned.email == worker_email_for(created.ward, 'waste')
+        assert created.to_dict()['assigned_worker_phone'] == assigned.phone
 
     # 9. Micro-Proximity Auto-Merge Test (< 20m)
     img2 = io.BytesIO()
@@ -362,3 +580,44 @@ def test_file_complaint_api(client, app):
     assert res_out.status_code == 400
     assert 'outside_mcc_boundary' in res_out.get_json()
     assert res_out.get_json()['outside_mcc_boundary'] is True
+
+def test_all_department_workers_for_a_ward_can_log_in(client, app):
+    with app.app_context():
+        ward = Ward.query.filter_by(ward_number=61).one()
+        workers = User.query.filter_by(ward_id=ward.id, role='ward_worker').all()
+        assert len(workers) == 4
+        for worker in workers:
+            response = client.post('/api/auth/login', json={
+                'email': worker.email,
+                'password': 'Worker@123',
+            })
+            assert response.status_code == 200
+
+def test_startup_backfills_existing_complaint_assignment(app):
+    with app.app_context():
+        ward = Ward.query.filter_by(ward_number=61).one()
+        department = Department.query.filter_by(name="Roads & Infrastructure").one()
+        complaint = Complaint(
+            complaint_code="MCC-2026-BACKFILL",
+            latitude=12.30,
+            longitude=76.65,
+            ward_id=ward.id,
+            department_id=department.id,
+            status="SUBMITTED",
+        )
+        db.session.add(complaint)
+        db.session.commit()
+
+        ensure_ward_department_workers()
+        ensure_ward_department_workers()
+        db.session.refresh(complaint)
+
+        worker = User.query.get(complaint.assigned_worker_id)
+        assert worker.email == worker_email_for(ward, "road")
+        assert complaint.assigned_at is not None
+        assert complaint.status == "ASSIGNED"
+        assignment_history = ComplaintStatusHistory.query.filter_by(
+            complaint_id=complaint.id,
+            new_status="ASSIGNED",
+        ).all()
+        assert len(assignment_history) == 1

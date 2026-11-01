@@ -26,6 +26,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
   const [recurring, setRecurring] = useState([]);
   const [wardScores, setWardScores] = useState([]);
   const [overdueList, setOverdueList] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [assignmentList, setAssignmentList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Verification modal / action
@@ -36,13 +38,15 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [qRes, ovRes, hRes, rRes, wRes, odRes] = await Promise.all([
+      const [qRes, ovRes, hRes, rRes, wRes, odRes, workerRes, assignmentRes] = await Promise.all([
         api.get('/admin/verification-queue'),
         api.get('/admin/analytics/overview'),
         api.get('/admin/analytics/hotspots'),
         api.get('/admin/analytics/recurring-issues'),
         api.get('/admin/analytics/ward-health-scores'),
-        api.get('/admin/analytics/sla-overdue')
+        api.get('/admin/analytics/sla-overdue'),
+        api.get('/admin/workers'),
+        api.get('/admin/assignment-monitoring')
       ]);
       setQueue(qRes.data.queue || []);
       setOverview(ovRes.data);
@@ -50,6 +54,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
       setRecurring(rRes.data.recurring_issues || []);
       setWardScores(wRes.data.scores || []);
       setOverdueList(odRes.data.overdue_complaints || []);
+      setWorkers(workerRes.data.workers || []);
+      setAssignmentList(assignmentRes.data.complaints || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -139,6 +145,9 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
           >
             <Clock size={16} /> Overdue ({overdueList.length})
+          </button>
+          <button onClick={() => setActiveTab('assignments')} className={`btn ${activeTab === 'assignments' ? 'btn-primary' : 'btn-outline'}`} style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            <Users size={16} /> Worker Assignments ({assignmentList.length})
           </button>
         </div>
       </div>
@@ -422,6 +431,28 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'assignments' && (
+        <div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '14px' }}>Worker assignment monitoring</h3>
+          {assignmentList.map((c) => (
+            <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1 }}>
+                <strong>{c.complaint_code}</strong> · {c.category_name} · Ward {c.ward_number}
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.status} · {c.progress_percent || 0}% · {c.assigned_worker_name || 'Unassigned'}</div>
+              </div>
+              <select className="form-select" value={c.assigned_worker_id || ''} onChange={async (e) => {
+                if (!e.target.value) return;
+                try { await api.patch(`/admin/complaints/${c.id}/assign-worker`, { worker_id: Number(e.target.value) }); loadData(); }
+                catch (err) { alert(err.response?.data?.error || 'Assignment failed'); }
+              }}>
+                <option value="">Assign worker</option>
+                {workers.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.role})</option>)}
+              </select>
+            </div>
+          ))}
         </div>
       )}
 

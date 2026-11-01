@@ -13,7 +13,7 @@ import AdminDashboard from './pages/AdminDashboard';
 
 function MainApp() {
   const [activePage, setActivePage] = useState('home');
-  const { user, isAdmin, isOfficer, isCorporator } = useAuth();
+  const { user, isAdmin, isOfficer, isWorker, isCorporator } = useAuth();
 
   const renderPage = () => {
     switch (activePage) {
@@ -31,6 +31,8 @@ function MainApp() {
         return <Login setActivePage={setActivePage} />;
       case 'officer-dashboard':
         return isOfficer || isAdmin ? <OfficerDashboard /> : <Login setActivePage={setActivePage} />;
+      case 'worker-dashboard':
+        return isWorker || isAdmin ? <OfficerDashboard workerMode /> : <Login setActivePage={setActivePage} />;
       case 'corporator-dashboard':
         return isCorporator || isAdmin ? <CorporatorDashboard /> : <Login setActivePage={setActivePage} />;
       case 'admin-dashboard':

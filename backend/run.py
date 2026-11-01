@@ -46,6 +46,14 @@ with app.app_context():
     except Exception as e:
         print(f"Database init check: {e}")
 
+    # Keep documented demo worker accounts available on every startup, including
+    # databases that were seeded before these accounts were introduced.
+    try:
+        from seed.seed_data import ensure_demo_workers
+        ensure_demo_workers()
+    except Exception as e:
+        print(f"Demo worker account check: {e}")
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes', 'on')

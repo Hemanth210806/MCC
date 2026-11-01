@@ -3,10 +3,15 @@ import axios from 'axios';
 // Determine API base:
 // 1. If running on same origin as backend (e.g. Render unified app), use relative '/api'
 // 2. Otherwise (e.g. Vercel deployment), use environment variable VITE_API_BASE_URL
-const isSameOriginBackend = typeof window !== 'undefined' && 
+const isLocalFrontend = typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+  window.location.port !== '5000';
+const isSameOriginBackend = typeof window !== 'undefined' &&
   (window.location.hostname.includes('onrender.com') || window.location.hostname === 'localhost' && window.location.port === '5000');
 
-export const API_BASE = isSameOriginBackend 
+export const API_BASE = isLocalFrontend
+  ? 'http://localhost:5000/api'
+  : isSameOriginBackend
   ? '/api' 
   : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
 

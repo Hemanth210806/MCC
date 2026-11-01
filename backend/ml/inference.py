@@ -120,9 +120,14 @@ def predict(image_path: str) -> Tuple[str, float]:
             resized = np.array(pil_img.resize((224, 224), Image.Resampling.BILINEAR))
         except Exception as e:
             print(f"[Inference] Image decoding warning for {image_path}: {e}")
-            return "Garbage_Waste", 0.55
+            raise RuntimeError(f"Image decoding failed: {e}") from e
 
-    input_arr = np.expand_dims(resized.astype('float32') / 255.0, axis=0)
+    # Match the preprocessing used by MobileNetV2 during training:
+    # scale RGB pixels from [0, 255] to [-1, 1].
+    input_arr = np.expand_dims(
+        (resized.astype('float32') / 127.5) - 1.0,
+        axis=0,
+    )
 
     if model is not None:
         try:
@@ -135,7 +140,6 @@ def predict(image_path: str) -> Tuple[str, float]:
             return standard_name, confidence
         except Exception as e:
             print(f"[Inference] Prediction execution exception: {e}")
-            return "Garbage_Waste", 0.55
+            raise RuntimeError(f"Model prediction failed: {e}") from e
 
-    return "Garbage_Waste", 0.55
-
+    raise RuntimeError("Trained classification model is unavailable")

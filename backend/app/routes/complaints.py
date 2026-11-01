@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from app.extensions import db
 from app.models.complaint import Complaint, ComplaintImage, ComplaintStatusHistory, Feedback
@@ -15,6 +16,7 @@ from app.services.recurring_service import recurring_service
 from app.services.sla_service import sla_service
 from app.services.storage_service import storage_service
 from app.routes.auth import token_required
+from app.services.worker_assignment import select_worker
 
 from app.utils.exif_reader import extract_exif_gps
 
@@ -147,6 +149,20 @@ def file_complaint():
         merged_parent.ai_model_version = ai_result.get('model_version', merged_parent.ai_model_version)
         assigned_dept = routing_service.get_department_for_category(matched_cat.id)
         merged_parent.department_id = assigned_dept.id if assigned_dept else merged_parent.department_id
+        # A duplicate report is additional evidence for the existing issue.
+        # Keep its active worker instead of dispatching the merged report again.
+        if not merged_parent.assigned_worker_id:
+            merged_worker = select_worker(
+                merged_parent.ward,
+                assigned_dept,
+                latitude=merged_parent.latitude,
+                longitude=merged_parent.longitude,
+            )
+            if merged_worker:
+                merged_parent.assigned_worker_id = merged_worker.id
+                merged_parent.assigned_at = merged_parent.assigned_at or datetime.utcnow()
+                if merged_parent.status == 'SUBMITTED':
+                    merged_parent.status = 'ASSIGNED'
         db.session.add(merged_parent)
 
     if merged_parent:
@@ -252,6 +268,16 @@ def file_complaint():
         sla_due_at=sla_due,
         is_demo_data=False
     )
+    assigned_worker = select_worker(
+        assigned_ward,
+        assigned_dept,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    if assigned_worker:
+        complaint.assigned_worker_id = assigned_worker.id
+        complaint.assigned_at = datetime.utcnow()
+        complaint.status = 'ASSIGNED'
     db.session.add(complaint)
     db.session.flush()
 
@@ -272,15 +298,14 @@ def file_complaint():
     )
     db.session.add(hist_sub)
 
-    # Auto transition to ASSIGNED
-    complaint.status = 'ASSIGNED'
-    hist_assign = ComplaintStatusHistory(
-        complaint_id=complaint.id,
-        old_status='SUBMITTED',
-        new_status='ASSIGNED',
-        remarks=f"Auto-routed to {assigned_dept.name if assigned_dept else 'MCC'}"
-    )
-    db.session.add(hist_assign)
+    if assigned_worker:
+        hist_assign = ComplaintStatusHistory(
+            complaint_id=complaint.id,
+            old_status='SUBMITTED',
+            new_status='ASSIGNED',
+            remarks=f"Automatically assigned to {assigned_worker.name} ({assigned_worker.email}) for {assigned_ward.ward_name} / {assigned_dept.name}."
+        )
+        db.session.add(hist_assign)
     db.session.commit()
 
     # Check recurring issue
@@ -312,6 +337,9 @@ def file_complaint():
         'ai_confidence': round(ai_result.get('confidence', 0), 2),
         'ai_status': ai_result.get('status'),
         'department_name': assigned_dept.name if assigned_dept else None,
+        'assigned_worker_id': complaint.assigned_worker_id,
+        'assigned_worker_name': assigned_worker.name if assigned_worker else None,
+        'assigned_worker_phone': assigned_worker.phone if assigned_worker else None,
         'priority': priority_level,
         'priority_reasons': priority_reasons,
         'sla_due_at': sla_due.isoformat(),

@@ -25,10 +25,28 @@ def create_app(config_name='development'):
                     if 'merged_into_complaint_id' not in existing_cols:
                         conn.execute(text("ALTER TABLE complaints ADD COLUMN merged_into_complaint_id INTEGER NULL"))
                         conn.commit()
+                    migration_columns = {
+                        'assigned_worker_id': 'INTEGER NULL',
+                        'assigned_at': 'DATETIME NULL',
+                        'assigned_by_user_id': 'INTEGER NULL',
+                        'progress_percent': 'INTEGER DEFAULT 0',
+                        'progress_note': 'TEXT NULL',
+                        'progress_updated_at': 'DATETIME NULL',
+                    }
+                    for column, definition in migration_columns.items():
+                        if column not in existing_cols:
+                            conn.execute(text(f"ALTER TABLE complaints ADD COLUMN {column} {definition}"))
+                            conn.commit()
                 else:
                     try:
                         conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS report_count INTEGER DEFAULT 1"))
                         conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS merged_into_complaint_id INTEGER NULL"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_worker_id INTEGER NULL"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_at DATETIME NULL"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS assigned_by_user_id INTEGER NULL"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS progress_percent INTEGER DEFAULT 0"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS progress_note TEXT NULL"))
+                        conn.execute(text("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS progress_updated_at DATETIME NULL"))
                         conn.commit()
                     except Exception:
                         pass
@@ -63,6 +81,14 @@ def create_app(config_name='development'):
                     app.logger.info(f"Synchronized {synced_count} official MCC wards in database.")
         except Exception as e:
             app.logger.info(f"Ward sync note: {e}")
+
+        # Keep the complete ward x department worker directory available for
+        # existing populated databases as well as freshly seeded databases.
+        try:
+            from seed.seed_data import ensure_ward_department_workers
+            ensure_ward_department_workers()
+        except Exception as e:
+            app.logger.info(f"Worker directory sync note: {e}")
 
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')
@@ -138,4 +164,3 @@ def create_app(config_name='development'):
             }, 200
 
     return app
-

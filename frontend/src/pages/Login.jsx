@@ -17,6 +17,7 @@ export default function Login({ setActivePage }) {
       const user = await login(email, password);
       if (user.role === 'admin') setActivePage('admin-dashboard');
       else if (user.role === 'field_officer') setActivePage('officer-dashboard');
+      else if (user.role === 'ward_worker') setActivePage('worker-dashboard');
       else if (user.role === 'corporator') setActivePage('corporator-dashboard');
       else setActivePage('home');
     } catch (err) {
@@ -106,6 +107,68 @@ export default function Login({ setActivePage }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginTop: '2px' }}>
+              Agrahara ward workers
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {[
+                ['🛣️ Roads Worker', 'agrahara_road@mcc.gov.in'],
+                ['🗑️ Waste Worker', 'agrahara_waste@mcc.gov.in'],
+                ['💡 Streetlight Worker', 'agrahara_street@mcc.gov.in'],
+                ['💧 Water Worker', 'agrahara_water@mcc.gov.in'],
+              ].map(([label, demoEmail]) => (
+                <button
+                  key={demoEmail}
+                  type="button"
+                  onClick={() => handleQuickLogin(demoEmail, 'Worker@123')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '8px 10px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    textAlign: 'left'
+                  }}
+                >
+                  <strong style={{ color: '#1e3a8a' }}>{label}</strong>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{demoEmail}</div>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginTop: '8px' }}>
+              Vidyaranyapuram ward workers
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {[
+                ['🛣️ Roads Worker', 'vidyaranyapuram_road@mcc.gov.in'],
+                ['🗑️ Waste Worker', 'vidyaranyapuram_waste@mcc.gov.in'],
+                ['💡 Streetlight Worker', 'vidyaranyapuram_street@mcc.gov.in'],
+                ['💧 Water Worker', 'vidyaranyapuram_water@mcc.gov.in'],
+              ].map(([label, demoEmail]) => (
+                <button
+                  key={demoEmail}
+                  type="button"
+                  onClick={() => handleQuickLogin(demoEmail, 'Worker@123')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '8px 10px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    textAlign: 'left'
+                  }}
+                >
+                  <strong style={{ color: '#1e3a8a' }}>{label}</strong>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{demoEmail}</div>
+                </button>
+              ))}
+            </div>
+
             <button 
               type="button"
               onClick={() => handleQuickLogin('admin@mcc.gov.in', 'Admin@123')}

@@ -4,7 +4,7 @@ import PriorityBadge from '../components/PriorityBadge';
 import api from '../services/api';
 import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { formatDateTime } from '../utils/exifHelper';
-import { Search, MapPin, Building, Calendar, Star, CheckCircle, AlertCircle, Clock, Layers, Sparkles } from 'lucide-react';
+import { Search, MapPin, Building, Calendar, Star, CheckCircle, AlertCircle, Clock, Layers, Sparkles, Phone } from 'lucide-react';
 
 export default function TrackComplaint() {
   const [code, setCode] = useState('');
@@ -159,6 +159,30 @@ export default function TrackComplaint() {
 
             {/* Stepper Timeline */}
             <StatusTimeline currentStatus={complaint.status} timeline={complaint.timeline || []} />
+
+            {complaint.assigned_worker_name && (
+              <div style={{ marginTop: '16px', padding: '12px 14px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '0.85rem' }}>
+                <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', fontWeight: 700 }}>ASSIGNED WORKER</span>
+                <strong style={{ color: '#1e3a8a' }}>{complaint.assigned_worker_name}</strong>
+                {complaint.assigned_worker_phone && (
+                  <a href={`tel:${complaint.assigned_worker_phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: '12px', color: '#2563eb' }}>
+                    <Phone size={14} /> {complaint.assigned_worker_phone}
+                  </a>
+                )}
+              </div>
+            )}
+
+            {(complaint.status === 'IN_PROGRESS' || complaint.status === 'OVERDUE' || complaint.progress_percent > 0) && (
+              <div style={{ marginTop: '16px', padding: '14px', backgroundColor: '#f0fdfa', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700, color: '#115e59' }}>
+                  <span>Field work progress</span><span>{complaint.progress_percent || 0}%</span>
+                </div>
+                <div style={{ height: '8px', backgroundColor: '#ccfbf1', borderRadius: '999px', marginTop: '8px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(0, Math.min(100, complaint.progress_percent || 0))}%`, height: '100%', backgroundColor: '#0d9488', borderRadius: '999px' }} />
+                </div>
+                {complaint.progress_note && <div style={{ marginTop: '7px', fontSize: '0.8rem', color: '#475569' }}>{complaint.progress_note}</div>}
+              </div>
+            )}
 
             {/* Meta Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', fontSize: '0.85rem' }}>

@@ -3,6 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import json
 import random
+import re
 from datetime import datetime, timedelta
 from shapely.geometry import shape, Point
 from app import create_app
@@ -17,6 +18,142 @@ from app.models.analytics import SlaRule, Hotspot, RecurringIssue, AuditLog
 from app.utils.id_generator import generate_complaint_code
 from app.utils.geo import haversine_distance_meters
 from app.services.hotspot_service import hotspot_service
+from app.services.worker_assignment import select_worker
+
+WARD_DEPARTMENT_WORKER_SPECS = (
+    ("waste", "Solid Waste Management"),
+    ("road", "Roads & Infrastructure"),
+    ("street", "Electrical & Street Lighting"),
+    ("water", "Water Supply & Sewerage"),
+)
+WORKER_PASSWORD = "Worker@123"
+
+DEMO_WORKERS = [
+    {
+        "name": "Agrahara Ward Worker",
+        "email": "agrahara.worker@mcc.gov.in",
+        "phone": "9880022102",
+        "ward_names": ("Agrahara",),
+        "department": "Solid Waste Management",
+    },
+    {
+        "name": "Vidhyaranyapuram Ward Worker",
+        "email": "vidhya.worker@mcc.gov.in",
+        "phone": "9880033102",
+        "ward_names": ("Vidhyaranyapuram", "Vidyaranyapuram"),
+        "department": "Roads & Infrastructure",
+    },
+]
+
+def normalize_worker_name(value):
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", value.lower())).strip("_")
+
+def worker_email_for(ward, department_slug):
+    return f"{normalize_worker_name(ward.ward_name)}_{department_slug}@mcc.gov.in"
+
+def worker_phone_for(ward, department_slug):
+    department_index = {slug: index for index, (slug, _) in enumerate(WARD_DEPARTMENT_WORKER_SPECS, 1)}[department_slug]
+    return f"98{ward.ward_number:03d}{department_index:02d}001"
+
+def ensure_ward_department_workers():
+    """Ensure one idempotent worker account exists for every official ward/department."""
+    departments = {
+        department.name: department
+        for department in Department.query.all()
+    }
+    for ward in Ward.query.order_by(Ward.ward_number).all():
+        for department_slug, department_name in WARD_DEPARTMENT_WORKER_SPECS:
+            department = departments.get(department_name)
+            if not department:
+                continue
+            email = worker_email_for(ward, department_slug)
+            worker = User.query.filter_by(email=email).first()
+            if not worker:
+                worker = User(email=email)
+                db.session.add(worker)
+            worker.set_password(WORKER_PASSWORD)
+            worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
+            worker.phone = worker_phone_for(ward, department_slug)
+            worker.role = "ward_worker"
+            worker.department_id = department.id
+            worker.ward_id = ward.id
+    db.session.commit()
+    backfill_complaint_assignments()
+
+def backfill_complaint_assignments():
+    """Assign existing trackable complaints after the worker directory is created."""
+    eligible_statuses = {"SUBMITTED", "ASSIGNED", "IN_PROGRESS", "REOPENED", "OVERDUE"}
+    complaints = Complaint.query.filter(
+        Complaint.assigned_worker_id.is_(None),
+        Complaint.ward_id.isnot(None),
+        Complaint.department_id.isnot(None),
+        Complaint.status.in_(eligible_statuses),
+    ).all()
+    changed = False
+    for complaint in complaints:
+        worker = select_worker(
+            complaint.ward,
+            complaint.department,
+            latitude=complaint.latitude,
+            longitude=complaint.longitude,
+        )
+        if not worker:
+            continue
+        old_status = complaint.status
+        complaint.assigned_worker_id = worker.id
+        complaint.assigned_at = complaint.assigned_at or datetime.utcnow()
+        if complaint.status == "SUBMITTED":
+            complaint.status = "ASSIGNED"
+        has_assignment_history = ComplaintStatusHistory.query.filter(
+            ComplaintStatusHistory.complaint_id == complaint.id,
+            ComplaintStatusHistory.new_status == "ASSIGNED",
+        ).first()
+        if not has_assignment_history:
+            db.session.add(ComplaintStatusHistory(
+                complaint_id=complaint.id,
+                old_status=old_status,
+                new_status="ASSIGNED",
+                remarks=f"Backfilled automatic assignment to {worker.name} ({worker.email}) for {complaint.ward.ward_name} / {complaint.department.name}.",
+            ))
+        changed = True
+    if changed:
+        db.session.commit()
+
+def ensure_demo_workers():
+    """Backward-compatible wrapper for the original demo-worker seed hook."""
+    ensure_ward_department_workers()
+    departments = {department.name: department for department in Department.query.all()}
+    wards = Ward.query.all()
+    for worker_data in DEMO_WORKERS:
+        department = departments.get(worker_data["department"])
+        ward = next((ward for ward in wards if ward.ward_name in worker_data["ward_names"]), None)
+        if not department or not ward:
+            continue
+        worker = User.query.filter_by(email=worker_data["email"]).first()
+        if not worker:
+            worker = User(email=worker_data["email"])
+            db.session.add(worker)
+        worker.set_password(WORKER_PASSWORD)
+        worker.name = worker_data["name"]
+        worker.phone = worker_data["phone"]
+        worker.role = "ward_worker"
+        worker.department_id = department.id
+        worker.ward_id = ward.id
+    db.session.commit()
+    backfill_complaint_assignments()
+
+def get_ward_department_worker(ward, department):
+    if not ward or not department:
+        return None
+    for department_slug, department_name in WARD_DEPARTMENT_WORKER_SPECS:
+        if department.name == department_name:
+            return User.query.filter_by(
+                email=worker_email_for(ward, department_slug),
+                role="ward_worker",
+                ward_id=ward.id,
+                department_id=department.id,
+            ).first()
+    return None
 
 def generate_point_in_polygon(polygon):
     minx, miny, maxx, maxy = polygon.bounds
@@ -41,7 +178,8 @@ def seed_database(app=None):
         db.create_all()
         from app.models.user import User
         if User.query.filter_by(email='admin@mcc.gov.in').first():
-            print("Admin user already exists. Database already populated.")
+            ensure_demo_workers()
+            print("Admin user already exists. Ensured demo ward-worker accounts.")
             return
 
         print("Populating database tables...")
@@ -102,7 +240,7 @@ def seed_database(app=None):
         db.session.commit()
         print(f"Loaded {len(ward_objects)} real MCC wards into database.")
 
-        # 5. Seed Users: Admin, Field Officers, and Ward Corporators
+        # 5. Seed Users: Admin, Field Officers, Ward Workers, and Ward Corporators
         # Admin
         admin = User(name="MCC Administrator", email="admin@mcc.gov.in", phone="9880012345", role="admin")
         admin.set_password("Admin@123")
@@ -126,6 +264,17 @@ def seed_database(app=None):
             officer_objs.append(u)
             db.session.add(u)
 
+        workers = [
+            ("MCC Ward Worker SWM", "swm.worker@mcc.gov.in", "9880022101", dept_swm.id),
+            ("MCC Ward Worker Roads", "roads.worker@mcc.gov.in", "9880033101", dept_roads.id),
+            ("MCC Ward Worker Electrical", "elec.worker@mcc.gov.in", "9880044101", dept_elec.id),
+            ("MCC Ward Worker Water", "water.worker@mcc.gov.in", "9880055101", dept_water.id),
+        ]
+        for name, email, phone, d_id in workers:
+            u = User(name=name, email=email, phone=phone, role="ward_worker", department_id=d_id)
+            u.set_password("Worker@123")
+            db.session.add(u)
+
         db.session.commit()
 
         # Corporator per real ward (65 corporators)
@@ -140,7 +289,8 @@ def seed_database(app=None):
             w.corporator_user_id = corp.id
 
         db.session.commit()
-        print("Seeded staff: 1 Admin, 8 Field Officers, 65 Corporators.")
+        ensure_demo_workers()
+        print("Seeded staff: 1 Admin, 8 Field Officers, 6 Ward Workers, 65 Corporators.")
 
         # 6. Seed Important Locations
         imp_places_path = os.path.join(backend_dir, 'data', 'important_places.geojson')
@@ -392,7 +542,11 @@ def seed_database(app=None):
         print("   Electrical: elec.officer@mcc.gov.in      | Officer@123")
         print("   Water:      water.officer@mcc.gov.in     | Officer@123")
         print("")
-        print("3. Ward Corporators (65 real wards):")
+        print("3. Ward Workers:")
+        print("   Agrahara:            agrahara.worker@mcc.gov.in | Worker@123 | 9880022102")
+        print("   Vidhyaranyapuram:    vidhya.worker@mcc.gov.in   | Worker@123 | 9880033102")
+        print("")
+        print("4. Ward Corporators (65 real wards):")
         print("   Ward 1:  ward1.corporator@mcc.gov.in     | Corporator@123")
         print("   Ward 12: ward12.corporator@mcc.gov.in    | Corporator@123")
         print("   Ward 15: ward15.corporator@mcc.gov.in    | Corporator@123")

@@ -1,5 +1,5 @@
 tensorflow
-keras
+keras>=3.0.0
 opencv-python
 numpy
 pandas

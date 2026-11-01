@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from app.extensions import db
-from app.models.complaint import Complaint, ComplaintImage
+from app.models.complaint import Complaint, ComplaintStatusHistory, ComplaintImage
 from app.models.evidence import ResolutionEvidence
 from app.models.user import User
 from app.models.department import Department, Category, CategoryDepartmentMap
@@ -15,6 +15,50 @@ from app.services.health_score_service import health_score_service
 from app.routes.auth import token_required, roles_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+@admin_bp.route('/workers', methods=['GET'])
+@roles_required('admin')
+def list_workers():
+    workers = User.query.filter(User.role.in_(['ward_worker', 'field_officer'])).order_by(User.name.asc()).all()
+    return jsonify({'workers': [u.to_dict() for u in workers]}), 200
+
+@admin_bp.route('/complaints/<int:complaint_id>/assign-worker', methods=['PATCH'])
+@roles_required('admin')
+def assign_worker(complaint_id):
+    complaint = Complaint.query.get_or_404(complaint_id)
+    data = request.get_json() or {}
+    worker_id = data.get('worker_id', data.get('assigned_worker_id'))
+    worker = User.query.filter(User.id == worker_id, User.role.in_(['ward_worker', 'field_officer'])).first()
+    if not worker:
+        return jsonify({'error': 'A valid ward worker or field officer is required'}), 400
+    if worker.department_id and complaint.department_id and worker.department_id != complaint.department_id:
+        return jsonify({'error': 'Worker must belong to the complaint department'}), 400
+    old_status = complaint.status
+    complaint.assigned_worker_id = worker.id
+    complaint.assigned_at = datetime.utcnow()
+    complaint.assigned_by_user_id = request.current_user.id
+    if complaint.status in ('SUBMITTED', 'REOPENED'):
+        complaint.status = 'ASSIGNED'
+    db.session.add(ComplaintStatusHistory(
+        complaint_id=complaint.id, old_status=old_status, new_status=complaint.status,
+        changed_by_user_id=request.current_user.id,
+        remarks=f'Assigned to {worker.name} by Admin {request.current_user.name}.'
+    ))
+    notification_service.send(
+        recipient_type='user', recipient_ref_id=worker.id,
+        message=f'Complaint {complaint.complaint_code} has been assigned to you.',
+        complaint_id=complaint.id
+    )
+    db.session.commit()
+    return jsonify({'message': 'Worker assigned', 'complaint': complaint.to_dict(include_sensitive=True)}), 200
+
+@admin_bp.route('/assignment-monitoring', methods=['GET'])
+@roles_required('admin')
+def assignment_monitoring():
+    complaints = Complaint.query.filter(
+        Complaint.status.in_(['ASSIGNED', 'IN_PROGRESS', 'OVERDUE', 'REOPENED'])
+    ).order_by(Complaint.updated_at.desc()).all()
+    return jsonify({'complaints': [c.to_dict(include_sensitive=True) for c in complaints]}), 200
 
 # ----------------- Verification Queue (Section 17) -----------------
 @admin_bp.route('/verification-queue', methods=['GET'])

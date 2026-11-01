@@ -24,6 +24,12 @@ class Complaint(db.Model):
 
     ward_id = db.Column(db.Integer, db.ForeignKey('wards.id'), nullable=True, index=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True, index=True)
+    assigned_worker_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    assigned_at = db.Column(db.DateTime, nullable=True)
+    assigned_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    progress_percent = db.Column(db.Integer, default=0)
+    progress_note = db.Column(db.Text, nullable=True)
+    progress_updated_at = db.Column(db.DateTime, nullable=True)
 
     priority = db.Column(db.String(20), default='MEDIUM', index=True)  # LOW, MEDIUM, HIGH
     priority_score = db.Column(db.Integer, default=50)
@@ -45,6 +51,8 @@ class Complaint(db.Model):
     ai_predicted_category = db.relationship('Category', foreign_keys=[ai_predicted_category_id])
     ward = db.relationship('Ward', backref='complaints')
     department = db.relationship('Department', backref='complaints')
+    assigned_worker = db.relationship('User', foreign_keys=[assigned_worker_id])
+    assigned_by_user = db.relationship('User', foreign_keys=[assigned_by_user_id])
     images = db.relationship('ComplaintImage', backref='complaint', lazy='dynamic', cascade='all, delete-orphan')
     status_history = db.relationship('ComplaintStatusHistory', backref='complaint', lazy='dynamic', order_by='ComplaintStatusHistory.created_at.asc()', cascade='all, delete-orphan')
     resolution_evidence = db.relationship('ResolutionEvidence', backref='complaint', uselist=False, cascade='all, delete-orphan')
@@ -70,6 +78,13 @@ class Complaint(db.Model):
             'ward_name': self.ward.ward_name if self.ward else 'Unknown Ward',
             'department_id': self.department_id,
             'department_name': self.department.name if self.department else None,
+            'assigned_worker_id': self.assigned_worker_id,
+            'assigned_worker_name': self.assigned_worker.name if self.assigned_worker else None,
+            'assigned_worker_phone': self.assigned_worker.phone if self.assigned_worker else None,
+            'assigned_at': self.assigned_at.isoformat() if self.assigned_at else None,
+            'progress_percent': self.progress_percent or 0,
+            'progress_note': self.progress_note,
+            'progress_updated_at': self.progress_updated_at.isoformat() if self.progress_updated_at else None,
             'priority': self.priority,
             'priority_score': self.priority_score,
             'priority_reasons': self.priority_reasons or [],

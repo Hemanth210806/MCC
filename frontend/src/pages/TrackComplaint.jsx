@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Eye,
   SlidersHorizontal,
-  FileText
+  FileText,
+  Phone
 } from 'lucide-react';
 
 export default function TrackComplaint() {
@@ -348,6 +349,59 @@ export default function TrackComplaint() {
                     <div style={{ marginTop: '18px', padding: '14px', backgroundColor: '#fcfaf4', borderRadius: '8px', fontSize: '0.88rem', border: '1px solid #e8dfc9' }}>
                       <strong style={{ color: '#b38328' }}>{language === 'kn' ? 'ನಾಗರಿಕರ ವಿವರಣೆ' : 'Citizen Description'}: </strong>
                       <span style={{ color: '#4a5040' }}>{complaint.description}</span>
+                    </div>
+                  )}
+
+                  {complaint.assigned_worker_name && (
+                    <div style={{
+                      marginTop: '18px',
+                      padding: '14px 16px',
+                      backgroundColor: '#edf4e4',
+                      border: '1.5px solid #b8c9a3',
+                      borderRadius: '9px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '14px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div>
+                        <div style={{
+                          color: '#4b5e28',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          marginBottom: '4px'
+                        }}>
+                          {language === 'kn' ? 'ನಿಯೋಜಿಸಲಾದ ಸಿಬ್ಬಂದಿ' : 'ASSIGNED WORKER'}
+                        </div>
+                        <strong style={{ color: '#1f241a', fontSize: '1rem' }}>
+                          {complaint.assigned_worker_name}
+                        </strong>
+                        <div style={{ color: '#5e6654', fontSize: '0.82rem', marginTop: '3px' }}>
+                          {complaint.ward_name} • {complaint.department_name}
+                        </div>
+                      </div>
+                      {complaint.assigned_worker_phone && (
+                        <a
+                          href={`tel:${complaint.assigned_worker_phone}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: '#4b5e28',
+                            fontWeight: 800,
+                            textDecoration: 'none',
+                            padding: '8px 12px',
+                            border: '1px solid #8da86a',
+                            borderRadius: '7px',
+                            backgroundColor: '#ffffff'
+                          }}
+                        >
+                          <Phone size={15} /> {complaint.assigned_worker_phone}
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

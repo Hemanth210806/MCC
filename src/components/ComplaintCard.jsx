@@ -1,5 +1,6 @@
 import React from 'react';
 import PriorityBadge from './PriorityBadge';
+import ComplaintProgressBar from './ComplaintProgressBar';
 import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
 import { MapPin, Calendar, Building, Clock, ArrowRight } from 'lucide-react';
 import { formatDateTime } from '../utils/exifHelper';
@@ -76,6 +77,9 @@ export default function ComplaintCard({ complaint, onSelect, actionLabel = 'View
           🔥 Cluster: {complaint.report_count} citizen reports merged at this spot
         </div>
       )}
+
+      {/* Visual Progress Bar Component */}
+      <ComplaintProgressBar complaint={complaint} mode="compact" />
 
       {onSelect && (
         <button 

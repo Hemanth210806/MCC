@@ -4,6 +4,7 @@ import api from '../services/api';
 import { Camera, MapPin, Upload, AlertCircle, CheckCircle2, ArrowRight, Loader2, Sparkles, ShieldAlert, Layers } from 'lucide-react';
 import { extractExifGps, stampGeotagOnImage, formatDateTime } from '../utils/exifHelper';
 import { useLanguage } from '../context/LanguageContext';
+import wardsData from '../data/mysuru_wards.json';
 
 export default function FileComplaint({ setActivePage }) {
   const { language, t } = useLanguage();
@@ -31,7 +32,7 @@ export default function FileComplaint({ setActivePage }) {
   const [successResult, setSuccessResult] = useState(null);
 
   // Wards GeoJSON for map display
-  const [wardGeoJson, setWardGeoJson] = useState(null);
+  const [wardGeoJson, setWardGeoJson] = useState(wardsData);
 
   const isManualLocationRef = React.useRef(false);
 
@@ -109,7 +110,9 @@ export default function FileComplaint({ setActivePage }) {
     const loadWards = async () => {
       try {
         const res = await api.get('/public/wards');
-        if (res.data) setWardGeoJson(res.data);
+        if (res.data && res.data.type === 'FeatureCollection' && Array.isArray(res.data.features)) {
+          setWardGeoJson(res.data);
+        }
       } catch (err) {
         // fallback to silent
       }

@@ -94,64 +94,99 @@ export default function MapView({
 
   // Update Wards GeoJSON Layer
   useEffect(() => {
-    if (!mapRef.current || !wardGeoJson) return;
+    if (!mapRef.current) return;
 
     if (geojsonLayerRef.current) {
-      mapRef.current.removeLayer(geojsonLayerRef.current);
+      try {
+        mapRef.current.removeLayer(geojsonLayerRef.current);
+      } catch (e) {
+        // ignore removal error
+      }
+      geojsonLayerRef.current = null;
     }
 
-    const layer = L.geoJSON(wardGeoJson, {
-      style: (feature) => {
-        const score = feature.properties.health_score ?? 100;
-        let fillColor = '#4b5e28'; // olive green (excellent)
-        if (score < 50) fillColor = '#ef4444'; // red (critical)
-        else if (score < 70) fillColor = '#ea580c'; // orange (average)
-        else if (score < 85) fillColor = '#ca8a04'; // gold (good)
+    if (!wardGeoJson || typeof wardGeoJson !== 'object') return;
 
-        return {
-          fillColor: fillColor,
-          weight: 1.5,
-          opacity: 0.9,
-          color: '#4b5e28',
-          fillOpacity: 0.22
+    // Validate GeoJSON format
+    let validGeoData = null;
+    if (wardGeoJson.type === 'FeatureCollection' && Array.isArray(wardGeoJson.features)) {
+      const validFeatures = wardGeoJson.features.filter(f => 
+        f && 
+        typeof f === 'object' && 
+        f.geometry && 
+        typeof f.geometry === 'object' && 
+        f.geometry.type && 
+        Array.isArray(f.geometry.coordinates) &&
+        f.geometry.coordinates.length > 0
+      );
+      if (validFeatures.length > 0) {
+        validGeoData = {
+          type: 'FeatureCollection',
+          features: validFeatures
         };
-      },
-      onEachFeature: (feature, layer) => {
-        const p = feature.properties;
-        const popupContent = `
-          <div style="font-family: inherit; min-width: 190px;">
-            <div style="font-weight: 800; font-size: 0.95rem; color: #4b5e28; margin-bottom: 4px;">
-              Ward ${p.ward_number}: ${p.ward_name}
-            </div>
-            <div style="font-size: 0.8rem; margin-bottom: 6px;">
-              <strong>Civic Health Score:</strong> 
-              <span style="font-weight: 700; color: ${p.health_score < 60 ? '#dc2626' : '#16a34a'};">
-                ${p.health_score ?? 100} / 100 (${p.rating || 'EXCELLENT'})
-              </span>
-            </div>
-            <div style="font-size: 0.75rem; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 4px;">
-              <div>Total Reports: <strong>${p.total_complaints || 0}</strong></div>
-              <div>Resolved: <strong style="color: #16a34a;">${p.resolved_count || 0}</strong></div>
-              <div>Overdue: <strong style="color: #dc2626;">${p.overdue_count || 0}</strong></div>
-            </div>
-          </div>
-        `;
-        layer.bindPopup(popupContent);
-
-        layer.on('click', () => {
-          if (onWardSelect) onWardSelect(p);
-        });
-
-        layer.on('mouseover', function () {
-          this.setStyle({ fillOpacity: 0.45, weight: 2.5 });
-        });
-        layer.on('mouseout', function () {
-          this.setStyle({ fillOpacity: 0.25, weight: 1.5 });
-        });
       }
-    }).addTo(mapRef.current);
+    } else if (wardGeoJson.type === 'Feature' && wardGeoJson.geometry && Array.isArray(wardGeoJson.geometry?.coordinates)) {
+      validGeoData = wardGeoJson;
+    }
 
-    geojsonLayerRef.current = layer;
+    if (!validGeoData) return;
+
+    try {
+      const layer = L.geoJSON(validGeoData, {
+        style: (feature) => {
+          const score = feature.properties?.health_score ?? 100;
+          let fillColor = '#4b5e28'; // olive green (excellent)
+          if (score < 50) fillColor = '#ef4444'; // red (critical)
+          else if (score < 70) fillColor = '#ea580c'; // orange (average)
+          else if (score < 85) fillColor = '#ca8a04'; // gold (good)
+
+          return {
+            fillColor: fillColor,
+            weight: 1.5,
+            opacity: 0.9,
+            color: '#4b5e28',
+            fillOpacity: 0.22
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const p = feature.properties || {};
+          const popupContent = `
+            <div style="font-family: inherit; min-width: 190px;">
+              <div style="font-weight: 800; font-size: 0.95rem; color: #4b5e28; margin-bottom: 4px;">
+                Ward ${p.ward_number || ''}: ${p.ward_name || 'Ward'}
+              </div>
+              <div style="font-size: 0.8rem; margin-bottom: 6px;">
+                <strong>Civic Health Score:</strong> 
+                <span style="font-weight: 700; color: ${(p.health_score ?? 100) < 60 ? '#dc2626' : '#16a34a'};">
+                  ${p.health_score ?? 100} / 100 (${p.rating || 'EXCELLENT'})
+                </span>
+              </div>
+              <div style="font-size: 0.75rem; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                <div>Total Reports: <strong>${p.total_complaints || 0}</strong></div>
+                <div>Resolved: <strong style="color: #16a34a;">${p.resolved_count || 0}</strong></div>
+                <div>Overdue: <strong style="color: #dc2626;">${p.overdue_count || 0}</strong></div>
+              </div>
+            </div>
+          `;
+          layer.bindPopup(popupContent);
+
+          layer.on('click', () => {
+            if (onWardSelect) onWardSelect(p);
+          });
+
+          layer.on('mouseover', function () {
+            this.setStyle({ fillOpacity: 0.45, weight: 2.5 });
+          });
+          layer.on('mouseout', function () {
+            this.setStyle({ fillOpacity: 0.25, weight: 1.5 });
+          });
+        }
+      }).addTo(mapRef.current);
+
+      geojsonLayerRef.current = layer;
+    } catch (err) {
+      console.warn('Leaflet GeoJSON layer initialization skipped:', err);
+    }
   }, [wardGeoJson]);
 
   // Zoom to selected ward when changed via dropdown

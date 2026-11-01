@@ -181,6 +181,10 @@ const mockAdapter = async (config) => {
     });
   }
 
+  if ((path === '/public/wards' || path === '/wards') && method === 'get') {
+    return ok(wardsData);
+  }
+
   if (path === '/public/wards/lookup' && method === 'get') {
     const lat = parseFloat(queryParams.get('lat') || 0);
     const lng = parseFloat(queryParams.get('lng') || 0);

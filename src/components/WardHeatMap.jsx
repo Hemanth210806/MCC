@@ -103,59 +103,70 @@ export default function WardHeatMap({ complaints = [], onSelectWard = null }) {
     if (!mapRef.current) return;
 
     if (geojsonLayerRef.current) {
-      mapRef.current.removeLayer(geojsonLayerRef.current);
+      try {
+        mapRef.current.removeLayer(geojsonLayerRef.current);
+      } catch (e) {
+        // ignore removal error
+      }
+      geojsonLayerRef.current = null;
     }
 
-    const geoLayer = L.geoJSON(wardsData, {
-      style: (feature) => {
-        const wNum = feature.properties.ward_number;
-        const count = wardCounts[wNum] || 0;
-        const color = getDensityColor(count);
-        const isSelected = selectedWard && selectedWard.ward_number === wNum;
+    if (!wardsData || !wardsData.features) return;
 
-        return {
-          fillColor: color,
-          weight: isSelected ? 3.5 : 1.5,
-          opacity: 0.9,
-          color: isSelected ? '#1f241a' : color,
-          fillOpacity: count >= 6 ? 0.65 : (count >= 4 ? 0.50 : (count >= 2 ? 0.36 : 0.20)),
-          dashArray: isSelected ? '' : '2, 3'
-        };
-      },
-      onEachFeature: (feature, layer) => {
-        const p = feature.properties;
-        const count = wardCounts[p.ward_number] || 0;
-        const tier = getDensityTier(count, language);
+    try {
+      const geoLayer = L.geoJSON(wardsData, {
+        style: (feature) => {
+          const wNum = feature.properties?.ward_number;
+          const count = wardCounts[wNum] || 0;
+          const color = getDensityColor(count);
+          const isSelected = selectedWard && selectedWard.ward_number === wNum;
 
-        layer.bindTooltip(
-          `<strong>Ward ${p.ward_number} - ${p.ward_name}</strong><br/>
-           <span style="color:${getDensityColor(count)};font-weight:700;">${count} Active Issues (${tier})</span>`,
-          { sticky: true, className: 'leaflet-custom-tooltip' }
-        );
+          return {
+            fillColor: color,
+            weight: isSelected ? 3.5 : 1.5,
+            opacity: 0.9,
+            color: isSelected ? '#1f241a' : color,
+            fillOpacity: count >= 6 ? 0.65 : (count >= 4 ? 0.50 : (count >= 2 ? 0.36 : 0.20)),
+            dashArray: isSelected ? '' : '2, 3'
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const p = feature.properties || {};
+          const count = wardCounts[p.ward_number] || 0;
+          const tier = getDensityTier(count, language);
 
-        layer.on({
-          mouseover: (e) => {
-            const l = e.target;
-            l.setStyle({ weight: 3, color: '#1f241a', fillOpacity: 0.8 });
-            l.bringToFront();
-          },
-          mouseout: (e) => {
-            geoLayer.resetStyle(e.target);
-          },
-          click: () => {
-            setSelectedWard({
-              ward_number: p.ward_number,
-              ward_name: p.ward_name,
-              count,
-              tier,
-              breakdown: categoryBreakdown[p.ward_number] || {}
-            });
-          }
-        });
-      }
-    }).addTo(mapRef.current);
+          layer.bindTooltip(
+            `<strong>Ward ${p.ward_number} - ${p.ward_name}</strong><br/>
+             <span style="color:${getDensityColor(count)};font-weight:700;">${count} Active Issues (${tier})</span>`,
+            { sticky: true, className: 'leaflet-custom-tooltip' }
+          );
 
-    geojsonLayerRef.current = geoLayer;
+          layer.on({
+            mouseover: (e) => {
+              const l = e.target;
+              l.setStyle({ weight: 3, color: '#1f241a', fillOpacity: 0.8 });
+              l.bringToFront();
+            },
+            mouseout: (e) => {
+              geoLayer.resetStyle(e.target);
+            },
+            click: () => {
+              setSelectedWard({
+                ward_number: p.ward_number,
+                ward_name: p.ward_name,
+                count,
+                tier,
+                breakdown: categoryBreakdown[p.ward_number] || {}
+              });
+            }
+          });
+        }
+      }).addTo(mapRef.current);
+
+      geojsonLayerRef.current = geoLayer;
+    } catch (err) {
+      console.warn('Ward choropleth layer error:', err);
+    }
   }, [wardCounts, selectedWard, language]);
 
   // Update Pulsing Heat Markers

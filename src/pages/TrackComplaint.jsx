@@ -3,6 +3,7 @@ import StatusTimeline from '../components/StatusTimeline';
 import PriorityBadge from '../components/PriorityBadge';
 import CivicFAQ from '../components/CivicFAQ';
 import WardHeatMap from '../components/WardHeatMap';
+import ComplaintProgressBar from '../components/ComplaintProgressBar';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { getImageUrl, getCategoryFallback } from '../utils/imageUrl';
@@ -330,6 +331,9 @@ export default function TrackComplaint() {
                     </div>
                   </div>
 
+                  {/* Visual Progress Bar: Lifecycle Stages & Remaining SLA */}
+                  <ComplaintProgressBar complaint={complaint} mode="full" />
+
                   {/* Stepper Timeline */}
                   <StatusTimeline currentStatus={complaint.status} timeline={complaint.history || complaint.timeline || []} />
 
@@ -644,10 +648,8 @@ export default function TrackComplaint() {
                     style={{
                       padding: '16px 20px',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '16px',
-                      flexWrap: 'wrap',
+                      flexDirection: 'column',
+                      gap: '12px',
                       backgroundColor: '#ffffff',
                       borderColor: '#e5dcbe',
                       boxShadow: '0 2px 8px rgba(75, 94, 40, 0.05)',
@@ -656,68 +658,70 @@ export default function TrackComplaint() {
                         : (c.status === 'RESOLVED' ? '4px solid #4b5e28' : '4px solid #b38328')
                     }}
                   >
-                    {/* Left info */}
-                    <div style={{ flex: '1', minWidth: '240px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 800, color: '#b38328', fontSize: '1rem' }}>
-                          {c.complaint_code}
-                        </span>
-                        <PriorityBadge priority={c.priority} score={c.priority_score} reasons={c.priority_reasons} />
-                        <span className={`badge badge-${c.status}`}>
-                          {c.status.replace('_', ' ')}
-                        </span>
-                      </div>
+                    {/* Top Row: Meta info & action button */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1', minWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 800, color: '#b38328', fontSize: '1rem' }}>
+                            {c.complaint_code}
+                          </span>
+                          <PriorityBadge priority={c.priority} score={c.priority_score} reasons={c.priority_reasons} />
+                          <span className={`badge badge-${c.status}`}>
+                            {c.status.replace('_', ' ')}
+                          </span>
+                        </div>
 
-                      <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#1f241a' }}>
-                        {c.category_name}
-                      </div>
+                        <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#1f241a' }}>
+                          {c.category_name}
+                        </div>
 
-                      <p style={{
-                        fontSize: '0.82rem',
-                        color: '#4a5040',
-                        margin: '4px 0',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {c.description || (language === 'kn' ? 'ಮೈಸೂರು ಮಹಾನಗರ ಪಾಲಿಕೆ ವ್ಯಾಪ್ತಿಯಲ್ಲಿ ದೂರು ದಾಖಲಾಗಿದೆ.' : 'Civic report logged in municipal ward.')}
-                      </p>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.78rem', color: '#5e6654', marginTop: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4b5e28', fontWeight: 700 }}>
-                          <MapPin size={13} /> Ward {c.ward_number} - {c.ward_name}
-                        </span>
-                        <span>•</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Building size={13} /> {c.department_name}
-                        </span>
-                        <span>•</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Calendar size={13} /> {formatDateTime(c.created_at)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right Action Button with Olive Green Touch */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                      <div style={{ fontSize: '0.74rem', color: c.status === 'OVERDUE' ? '#b91c1c' : '#5e6654', fontWeight: 700 }}>
-                        SLA: {formatDateTime(c.sla_due_at)}
-                      </div>
-                      <button
-                        onClick={() => handleSelectFromDirectory(c)}
-                        className="btn btn-olive"
-                        style={{
-                          padding: '8px 16px',
+                        <p style={{
                           fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#ffffff',
-                          backgroundColor: '#4b5e28'
-                        }}
-                      >
-                        <Eye size={15} /> {language === 'kn' ? 'ಸ್ಥಿತಿ ಪರಿಶೀಲಿಸಿ' : 'Track Timeline'}
-                      </button>
+                          color: '#4a5040',
+                          margin: '4px 0',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {c.description || (language === 'kn' ? 'ಮೈಸೂರು ಮಹಾನಗರ ಪಾಲಿಕೆ ವ್ಯಾಪ್ತಿಯಲ್ಲಿ ದೂರು ದಾಖಲಾಗಿದೆ.' : 'Civic report logged in municipal ward.')}
+                        </p>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.78rem', color: '#5e6654', marginTop: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4b5e28', fontWeight: 700 }}>
+                            <MapPin size={13} /> Ward {c.ward_number} - {c.ward_name}
+                          </span>
+                          <span>•</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Building size={13} /> {c.department_name}
+                          </span>
+                          <span>•</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={13} /> {formatDateTime(c.created_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right Action Button with Olive Green Touch */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                        <button
+                          onClick={() => handleSelectFromDirectory(c)}
+                          className="btn btn-olive"
+                          style={{
+                            padding: '8px 16px',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            color: '#ffffff',
+                            backgroundColor: '#4b5e28'
+                          }}
+                        >
+                          <Eye size={15} /> {language === 'kn' ? 'ಸ್ಥಿತಿ ಪರಿಶೀಲಿಸಿ' : 'Track Timeline'}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Visual Progress Bar: Lifecycle Stages & Remaining SLA */}
+                    <ComplaintProgressBar complaint={c} mode="compact" />
                   </div>
                 ))}
               </div>

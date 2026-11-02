@@ -1,18 +1,12 @@
 import os
+import threading
 from flask import Flask, send_from_directory
 from app.config import config_by_name
 from app.extensions import db, cors
 
-def create_app(config_name='development'):
-    app = Flask(__name__, static_folder='static')
-    app.config.from_object(config_by_name.get(config_name, config_by_name['development']))
-
-    # Initialize extensions
-    db.init_app(app)
-    cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-    # Automatic schema migration for new columns
+def _initialize_database(app):
     with app.app_context():
+        db.create_all()
         try:
             from sqlalchemy import text
             with db.engine.connect() as conn:
@@ -53,7 +47,6 @@ def create_app(config_name='development'):
         except Exception as e:
             app.logger.info(f"Schema check note: {e}")
 
-        # Synchronize official 65 MCC wards in database
         try:
             from app.models.ward import Ward
             import json
@@ -64,17 +57,18 @@ def create_app(config_name='development'):
                 synced_count = 0
                 for feat in wdata.get('features', []):
                     p = feat['properties']
-                    wno = p['ward_number']
-                    wname = p['ward_name']
-                    wobj = Ward.query.filter_by(ward_number=wno).first()
+                    wobj = Ward.query.filter_by(ward_number=p['ward_number']).first()
                     if wobj:
-                        if wobj.ward_name != wname or wobj.geometry != feat['geometry']:
-                            wobj.ward_name = wname
+                        if wobj.ward_name != p['ward_name'] or wobj.geometry != feat['geometry']:
+                            wobj.ward_name = p['ward_name']
                             wobj.geometry = feat['geometry']
                             synced_count += 1
                     else:
-                        new_ward = Ward(ward_number=wno, ward_name=wname, geometry=feat['geometry'])
-                        db.session.add(new_ward)
+                        db.session.add(Ward(
+                            ward_number=p['ward_number'],
+                            ward_name=p['ward_name'],
+                            geometry=feat['geometry'],
+                        ))
                         synced_count += 1
                 if synced_count > 0:
                     db.session.commit()
@@ -82,13 +76,31 @@ def create_app(config_name='development'):
         except Exception as e:
             app.logger.info(f"Ward sync note: {e}")
 
-        # Keep the complete ward x department worker directory available for
-        # existing populated databases as well as freshly seeded databases.
         try:
             from seed.seed_data import ensure_ward_department_workers
             ensure_ward_department_workers()
         except Exception as e:
             app.logger.info(f"Worker directory sync note: {e}")
+
+        try:
+            from app.models.department import Department
+            if Department.query.count() == 0:
+                from seed.seed_data import seed_database
+                seed_database()
+            from seed.seed_data import ensure_demo_workers
+            ensure_demo_workers()
+        except Exception as e:
+            app.logger.info(f"Database seed note: {e}")
+
+def create_app(config_name='development'):
+    app = Flask(__name__, static_folder='static')
+    app.config.from_object(config_by_name.get(config_name, config_by_name['development']))
+
+    # Initialize extensions
+    db.init_app(app)
+    cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+    threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
 
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')

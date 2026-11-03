@@ -94,15 +94,6 @@ def select_worker(
     if not department:
         return None
 
-    if ward:
-        area_worker = User.query.filter_by(
-            role="ward_worker",
-            ward_id=ward.id,
-            department_id=department.id,
-        ).first()
-        if not area_worker:
-            _ensure_ward_worker(ward, department)
-
     worker_query = User.query.filter_by(
         role="ward_worker",
         department_id=department.id,
@@ -111,7 +102,9 @@ def select_worker(
         worker_query = worker_query.filter(User.ward_id.isnot(None))
     workers = worker_query.all()
     if not workers:
-        return None
+        if not ward:
+            return None
+        workers = [_ensure_ward_worker(ward, department)]
 
     worker_ids = [worker.id for worker in workers]
     busy_worker_ids = {
@@ -131,6 +124,20 @@ def select_worker(
     if ward and not same_ward_workers:
         same_ward_workers = [_ensure_ward_worker(ward, department)]
         workers.append(same_ward_workers[0])
+
+    if same_ward_workers:
+        queued = Complaint.query.filter(
+            Complaint.ward_id == ward.id,
+            Complaint.department_id == department.id,
+            Complaint.assigned_worker_id.is_(None),
+            Complaint.status == "SUBMITTED",
+        ).order_by(Complaint.created_at.asc(), Complaint.id.asc()).first()
+        if queued:
+            queue_worker = min(same_ward_workers, key=lambda worker: worker.id)
+            if queue_worker.id not in busy_worker_ids:
+                assign_next_queued_complaint(queue_worker)
+                db.session.flush()
+                return None
     free_same_ward = [
         worker for worker in same_ward_workers if worker.id not in busy_worker_ids
     ]
@@ -159,11 +166,6 @@ def select_worker(
 def assign_next_queued_complaint(worker: User) -> Optional[Complaint]:
     """Assign the oldest queued complaint for a worker's ward and department."""
     if not worker.ward_id or not worker.department_id:
-        return None
-    if Complaint.query.filter(
-        Complaint.assigned_worker_id == worker.id,
-        Complaint.status.in_(ACTIVE_WORK_STATUSES),
-    ).first():
         return None
     queued = Complaint.query.filter_by(
         ward_id=worker.ward_id,

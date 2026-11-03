@@ -140,14 +140,6 @@ def select_worker(
             ),
         )
 
-    # Preserve the ward-local queue when every same-department worker is busy.
-    if same_ward_workers:
-        return min(same_ward_workers, key=lambda worker: worker.id)
-
-    return min(
-        workers,
-        key=lambda worker: (
-            _ward_distance_meters(ward, worker.ward, latitude, longitude),
-            worker.id,
-        ),
-    )
+    # Do not assign an active complaint to a busy worker. The complaint remains
+    # unassigned until a worker in this department becomes available.
+    return None

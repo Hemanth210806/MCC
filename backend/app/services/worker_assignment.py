@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from shapely.geometry import shape
@@ -8,6 +9,7 @@ from app.models.user import User
 from app.models.ward import Ward
 from app.extensions import db
 from app.utils.geo import haversine_distance_meters
+from app.models.complaint import ComplaintStatusHistory
 
 
 ACTIVE_WORK_STATUSES = ("ASSIGNED", "IN_PROGRESS", "OVERDUE", "REOPENED")
@@ -143,3 +145,27 @@ def select_worker(
     # Do not assign an active complaint to a busy worker. The complaint remains
     # unassigned until a worker in this department becomes available.
     return None
+
+
+def assign_next_queued_complaint(worker: User) -> Optional[Complaint]:
+    """Assign the oldest queued complaint for a worker's ward and department."""
+    if not worker.ward_id or not worker.department_id:
+        return None
+    queued = Complaint.query.filter_by(
+        ward_id=worker.ward_id,
+        department_id=worker.department_id,
+        assigned_worker_id=None,
+        status="SUBMITTED",
+    ).order_by(Complaint.created_at.asc(), Complaint.id.asc()).first()
+    if not queued:
+        return None
+    queued.assigned_worker_id = worker.id
+    queued.assigned_at = datetime.utcnow()
+    queued.status = "ASSIGNED"
+    db.session.add(ComplaintStatusHistory(
+        complaint_id=queued.id,
+        old_status="SUBMITTED",
+        new_status="ASSIGNED",
+        remarks=f"Queued complaint assigned to {worker.name} after the worker became available.",
+    ))
+    return queued

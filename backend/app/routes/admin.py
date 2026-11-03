@@ -10,6 +10,7 @@ from app.models.important_location import ImportantLocation
 from app.models.analytics import Hotspot, RecurringIssue, SlaRule, AuditLog
 from app.services.sla_service import sla_service
 from app.services.notification_service import notification_service
+from app.services.worker_assignment import assign_next_queued_complaint
 from app.services.hotspot_service import hotspot_service
 from app.services.health_score_service import health_score_service
 from app.routes.auth import token_required, roles_required
@@ -144,6 +145,9 @@ def verify_resolution(complaint_id):
         )
         db.session.add(audit)
         db.session.commit()
+        if complaint.assigned_worker:
+            assign_next_queued_complaint(complaint.assigned_worker)
+            db.session.commit()
 
         return jsonify({'message': 'Complaint marked as RESOLVED.', 'status': 'RESOLVED'}), 200
 

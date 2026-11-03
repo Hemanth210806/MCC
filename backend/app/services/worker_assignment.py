@@ -17,9 +17,11 @@ WORKER_DEPARTMENT_SLUGS = {
     "Electrical & Street Lighting": "street",
     "Water Supply & Sewerage": "water",
 }
+_WORKER_PASSWORD_HASH = None
 
 
 def _ensure_ward_worker(ward: Ward, department: Department) -> User:
+    global _WORKER_PASSWORD_HASH
     department_slug = WORKER_DEPARTMENT_SLUGS.get(department.name, "general")
     normalized_ward_name = "".join(
         character.lower() if character.isalnum() else "_"
@@ -35,7 +37,12 @@ def _ensure_ward_worker(ward: Ward, department: Department) -> User:
     worker.role = "ward_worker"
     worker.ward_id = ward.id
     worker.department_id = department.id
-    worker.set_password("Worker@123")
+    if not worker.password_hash:
+        if _WORKER_PASSWORD_HASH is None:
+            worker.set_password("Worker@123")
+            _WORKER_PASSWORD_HASH = worker.password_hash
+        else:
+            worker.password_hash = _WORKER_PASSWORD_HASH
     db.session.flush()
     return worker
 

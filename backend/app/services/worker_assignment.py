@@ -94,6 +94,15 @@ def select_worker(
     if not department:
         return None
 
+    if ward:
+        area_worker = User.query.filter_by(
+            role="ward_worker",
+            ward_id=ward.id,
+            department_id=department.id,
+        ).first()
+        if not area_worker:
+            _ensure_ward_worker(ward, department)
+
     worker_query = User.query.filter_by(
         role="ward_worker",
         department_id=department.id,
@@ -150,6 +159,11 @@ def select_worker(
 def assign_next_queued_complaint(worker: User) -> Optional[Complaint]:
     """Assign the oldest queued complaint for a worker's ward and department."""
     if not worker.ward_id or not worker.department_id:
+        return None
+    if Complaint.query.filter(
+        Complaint.assigned_worker_id == worker.id,
+        Complaint.status.in_(ACTIVE_WORK_STATUSES),
+    ).first():
         return None
     queued = Complaint.query.filter_by(
         ward_id=worker.ward_id,

@@ -21,6 +21,10 @@ def get_department_complaints():
     status = request.args.get('status')
     priority = request.args.get('priority')
 
+    if user.role == 'ward_worker':
+        assign_next_queued_complaint(user)
+        db.session.commit()
+
     query = Complaint.query
     if user.role == 'field_officer' and user.department_id:
         query = query.filter_by(department_id=user.department_id)

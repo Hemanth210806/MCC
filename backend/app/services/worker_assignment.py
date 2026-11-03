@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional
 
 from shapely.geometry import shape
@@ -9,7 +8,6 @@ from app.models.user import User
 from app.models.ward import Ward
 from app.extensions import db
 from app.utils.geo import haversine_distance_meters
-from app.models.complaint import ComplaintStatusHistory
 
 
 ACTIVE_WORK_STATUSES = ("ASSIGNED", "IN_PROGRESS", "OVERDUE", "REOPENED")
@@ -40,6 +38,22 @@ def _ensure_ward_worker(ward: Ward, department: Department) -> User:
     worker.set_password("Worker@123")
     db.session.flush()
     return worker
+
+
+def ensure_all_ward_department_workers() -> None:
+    """Create the four department workers for every official ward."""
+    from app.models.department import Department
+
+    departments = {
+        department.name: department
+        for department in Department.query.all()
+    }
+    for ward in Ward.query.order_by(Ward.ward_number).all():
+        for department_name in WORKER_DEPARTMENT_SLUGS:
+            department = departments.get(department_name)
+            if department:
+                _ensure_ward_worker(ward, department)
+    db.session.commit()
 
 
 def _ward_distance_meters(
@@ -125,19 +139,6 @@ def select_worker(
         same_ward_workers = [_ensure_ward_worker(ward, department)]
         workers.append(same_ward_workers[0])
 
-    if same_ward_workers:
-        queued = Complaint.query.filter(
-            Complaint.ward_id == ward.id,
-            Complaint.department_id == department.id,
-            Complaint.assigned_worker_id.is_(None),
-            Complaint.status == "SUBMITTED",
-        ).order_by(Complaint.created_at.asc(), Complaint.id.asc()).first()
-        if queued:
-            queue_worker = min(same_ward_workers, key=lambda worker: worker.id)
-            if queue_worker.id not in busy_worker_ids:
-                assign_next_queued_complaint(queue_worker)
-                db.session.flush()
-                return None
     free_same_ward = [
         worker for worker in same_ward_workers if worker.id not in busy_worker_ids
     ]
@@ -158,30 +159,8 @@ def select_worker(
             ),
         )
 
-    # Do not assign an active complaint to a busy worker. The complaint remains
-    # unassigned until a worker in this department becomes available.
+    # Keep the originating ward's worker as the final fallback so every
+    # complaint is assigned even when the entire department is occupied.
+    if same_ward_workers:
+        return min(same_ward_workers, key=lambda worker: worker.id)
     return None
-
-
-def assign_next_queued_complaint(worker: User) -> Optional[Complaint]:
-    """Assign the oldest queued complaint for a worker's ward and department."""
-    if not worker.ward_id or not worker.department_id:
-        return None
-    queued = Complaint.query.filter_by(
-        ward_id=worker.ward_id,
-        department_id=worker.department_id,
-        assigned_worker_id=None,
-        status="SUBMITTED",
-    ).order_by(Complaint.created_at.asc(), Complaint.id.asc()).first()
-    if not queued:
-        return None
-    queued.assigned_worker_id = worker.id
-    queued.assigned_at = datetime.utcnow()
-    queued.status = "ASSIGNED"
-    db.session.add(ComplaintStatusHistory(
-        complaint_id=queued.id,
-        old_status="SUBMITTED",
-        new_status="ASSIGNED",
-        remarks=f"Queued complaint assigned to {worker.name} after the worker became available.",
-    ))
-    return queued

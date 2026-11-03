@@ -165,6 +165,7 @@ def create_app(config_name='development'):
         from app.models.department import Category, CategoryDepartmentMap, Department
         from app.models.user import User
         from app.models.ward import Ward
+        from app.services.worker_assignment import ensure_all_ward_department_workers
         import json
         wards_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'mysuru_wards.geojson')
         if os.path.exists(wards_file):
@@ -180,6 +181,7 @@ def create_app(config_name='development'):
                         geometry=feature['geometry'],
                     ))
             db.session.commit()
+            ensure_all_ward_department_workers()
         category_departments = (
             ("Garbage / Waste", "Solid Waste Management"),
             ("Pothole / Road Damage", "Roads & Infrastructure"),

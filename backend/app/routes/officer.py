@@ -10,7 +10,6 @@ from app.services.notification_service import notification_service
 from app.utils.geo import haversine_distance_meters
 from app.utils.exif_reader import extract_exif_gps
 from app.routes.auth import token_required, roles_required
-from app.services.worker_assignment import assign_next_queued_complaint
 
 officer_bp = Blueprint('officer', __name__, url_prefix='/api/officer')
 
@@ -20,10 +19,6 @@ def get_department_complaints():
     user = request.current_user
     status = request.args.get('status')
     priority = request.args.get('priority')
-
-    if user.role == 'ward_worker':
-        assign_next_queued_complaint(user)
-        db.session.commit()
 
     query = Complaint.query
     if user.role == 'field_officer' and user.department_id:
@@ -195,9 +190,6 @@ def submit_resolution(complaint_id):
         return jsonify({'error': str(e)}), 400
 
     db.session.commit()
-    assign_next_queued_complaint(user)
-    db.session.commit()
-
     return jsonify({
         'message': 'Resolution evidence submitted. Pending Admin verification.',
         'distance_from_original_m': round(distance_m, 1),

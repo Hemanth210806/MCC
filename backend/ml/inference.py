@@ -7,6 +7,7 @@ from typing import Tuple, Optional
 # Lazy import tensorflow to speed up general server startup
 _model = None
 _class_indices = None
+_tflite_interpreter = None
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DEFAULT_MODEL_PATH = os.path.join(PROJECT_ROOT, 'ml', 'model', 'civic_issue_mobilenetv2.keras')
@@ -44,9 +45,9 @@ def normalize_label(raw_label: str) -> str:
 
 
 def get_model(model_path: Optional[str] = None):
-    global _model, _class_indices
-    if _model is not None:
-        return _model, _class_indices
+    global _model, _class_indices, _tflite_interpreter
+    if _model is not None or _tflite_interpreter is not None:
+        return _tflite_interpreter or _model, _class_indices
 
     if not model_path:
         env_path = os.environ.get('ML_MODEL_PATH')
@@ -57,21 +58,39 @@ def get_model(model_path: Optional[str] = None):
                 _class_indices = {0: 'garbage_waste', 1: 'pothole', 2: 'streetlight'}
                 return _model, _class_indices
             model_path = env_path
-        candidates = [
-            os.path.join(os.path.dirname(__file__), 'model', 'civic_issue_mobilenetv2.keras'),
-            os.path.join(PROJECT_ROOT, 'models', 'mcc_mobilenetv2.keras'),
-            os.path.join(PROJECT_ROOT, 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
-            os.path.join(PROJECT_ROOT, 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
-            os.path.join(os.getcwd(), 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
-            os.path.join(os.getcwd(), 'models', 'mcc_mobilenetv2.keras'),
-            DEFAULT_MODEL_PATH,
-        ]
-        for cand in candidates:
-            if cand and os.path.exists(cand):
-                model_path = os.path.abspath(cand)
-                break
+        else:
+            candidates = [
+                os.path.join(os.path.dirname(__file__), 'model', 'civic_issue_mobilenetv2.keras'),
+                os.path.join(PROJECT_ROOT, 'models', 'mcc_mobilenetv2.keras'),
+                os.path.join(PROJECT_ROOT, 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
+                os.path.join(PROJECT_ROOT, 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
+                os.path.join(os.getcwd(), 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'),
+                os.path.join(os.getcwd(), 'models', 'mcc_mobilenetv2.keras'),
+                DEFAULT_MODEL_PATH,
+            ]
+            for cand in candidates:
+                if cand and os.path.exists(cand):
+                    model_path = os.path.abspath(cand)
+                    break
         if not model_path:
             model_path = DEFAULT_MODEL_PATH
+
+    if model_path and model_path.endswith('.tflite') and os.path.exists(model_path):
+        try:
+            try:
+                from tflite_runtime.interpreter import Interpreter
+            except ImportError:
+                import tensorflow as tf
+                Interpreter = tf.lite.Interpreter
+            _tflite_interpreter = Interpreter(model_path=model_path)
+            _tflite_interpreter.allocate_tensors()
+            _class_indices = _load_class_indices(model_path)
+            print(f"[Inference] Loaded lightweight TFLite model from {model_path}")
+        except Exception as e:
+            print(f"[Inference] Warning: Failed to load TFLite model at {model_path}: {e}")
+            _tflite_interpreter = None
+            _class_indices = {0: 'garbage_waste', 1: 'pothole', 2: 'streetlight'}
+        return _tflite_interpreter, _class_indices
 
     if os.path.exists(model_path):
         try:
@@ -102,6 +121,15 @@ def get_model(model_path: Optional[str] = None):
         _class_indices = {0: 'garbage_waste', 1: 'pothole', 2: 'streetlight'}
 
     return _model, _class_indices
+
+
+def _load_class_indices(model_path: str):
+    class_names_path = os.path.join(os.path.dirname(model_path), 'class_names.json')
+    if os.path.exists(class_names_path):
+        with open(class_names_path, 'r', encoding='utf-8') as f:
+            class_names = json.load(f)
+        return {idx: normalize_label(label) for idx, label in enumerate(class_names)}
+    return {0: 'garbage_waste', 1: 'pothole', 2: 'streetlight'}
 
 
 def predict(image_path: str) -> Tuple[str, float]:
@@ -137,7 +165,15 @@ def predict(image_path: str) -> Tuple[str, float]:
 
     if model is not None:
         try:
-            predictions = model.predict(input_arr, verbose=0)[0]
+            if hasattr(model, 'get_input_details'):
+                input_details = model.get_input_details()[0]
+                output_details = model.get_output_details()[0]
+                input_data = input_arr.astype(input_details['dtype'])
+                model.set_tensor(input_details['index'], input_data)
+                model.invoke()
+                predictions = model.get_tensor(output_details['index'])[0]
+            else:
+                predictions = model.predict(input_arr, verbose=0)[0]
             top_idx = int(np.argmax(predictions))
             confidence = float(predictions[top_idx])
             raw_label = class_indices.get(top_idx, 'garbage_waste')

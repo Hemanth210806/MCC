@@ -92,6 +92,44 @@ def _initialize_database(app):
         except Exception as e:
             app.logger.info(f"Database seed note: {e}")
 
+def _ensure_staff_accounts(app):
+    with app.app_context():
+        from app.models.department import Department
+        from app.models.user import User
+
+        departments = {}
+        for name in (
+            "Solid Waste Management",
+            "Roads & Infrastructure",
+            "Electrical & Street Lighting",
+            "Water Supply & Sewerage",
+        ):
+            department = Department.query.filter_by(name=name).first()
+            if not department:
+                department = Department(name=name, description=f"{name} department")
+                db.session.add(department)
+                db.session.flush()
+            departments[name] = department
+
+        accounts = (
+            ("MCC Administrator", "admin@mcc.gov.in", "9880012345", "admin", None, "Admin@123"),
+            ("Ramesh Kumar", "swm.officer@mcc.gov.in", "9880022001", "field_officer", departments["Solid Waste Management"], "Officer@123"),
+            ("Suresh Gowda", "roads.officer@mcc.gov.in", "9880033001", "field_officer", departments["Roads & Infrastructure"], "Officer@123"),
+            ("Vijay Bhaskar", "elec.officer@mcc.gov.in", "9880044001", "field_officer", departments["Electrical & Street Lighting"], "Officer@123"),
+            ("Manjunath Swamy", "water.officer@mcc.gov.in", "9880055001", "field_officer", departments["Water Supply & Sewerage"], "Officer@123"),
+        )
+        for name, email, phone, role, department, password in accounts:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(email=email)
+                db.session.add(user)
+            user.name = name
+            user.phone = phone
+            user.role = role
+            user.department_id = department.id if department else None
+            user.set_password(password)
+        db.session.commit()
+
 def create_app(config_name='development'):
     app = Flask(__name__, static_folder='static')
     app.config.from_object(config_by_name.get(config_name, config_by_name['development']))
@@ -123,6 +161,7 @@ def create_app(config_name='development'):
 
     with app.app_context():
         db.create_all()
+    _ensure_staff_accounts(app)
     threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
 
     # Determine frontend build directory (local development or production on Render).

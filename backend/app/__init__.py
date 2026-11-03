@@ -100,8 +100,6 @@ def create_app(config_name='development'):
     db.init_app(app)
     cors.init_app(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-    threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
-
     # Ensure uploads folder exists
     upload_dir = app.config.get('UPLOAD_FOLDER')
     os.makedirs(upload_dir, exist_ok=True)
@@ -122,6 +120,10 @@ def create_app(config_name='development'):
     app.register_blueprint(officer_bp)
     app.register_blueprint(corporator_bp)
     app.register_blueprint(admin_bp)
+
+    with app.app_context():
+        db.create_all()
+    threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
 
     # Determine frontend build directory (local development or production on Render).
     # Prefer the actual frontend build over any stale backend dist folder so the app

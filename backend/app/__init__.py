@@ -164,6 +164,7 @@ def create_app(config_name='development'):
     _ensure_staff_accounts(app)
     with app.app_context():
         from app.models.department import Category, CategoryDepartmentMap, Department
+        from app.models.user import User
         from app.models.ward import Ward
         import json
         wards_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'mysuru_wards.geojson')
@@ -201,6 +202,25 @@ def create_app(config_name='development'):
                     category_id=category.id,
                     department_id=department.id,
                 ))
+        db.session.commit()
+        demo_workers = (
+            ("Agrahara Ward Worker", "agrahara.worker@mcc.gov.in", "9880022102", "Agrahara", "Solid Waste Management"),
+            ("Vidhyaranyapuram Ward Worker", "vidhya.worker@mcc.gov.in", "9880033102", "Vidhyaranyapuram", "Roads & Infrastructure"),
+        )
+        for name, email, phone, ward_name, department_name in demo_workers:
+            ward = Ward.query.filter(Ward.ward_name.in_((ward_name, f"{ward_name}puram"))).first()
+            department = Department.query.filter_by(name=department_name).first()
+            if ward and department:
+                worker = User.query.filter_by(email=email).first()
+                if not worker:
+                    worker = User(email=email)
+                    db.session.add(worker)
+                worker.name = name
+                worker.phone = phone
+                worker.role = 'ward_worker'
+                worker.ward_id = ward.id
+                worker.department_id = department.id
+                worker.set_password('Worker@123')
         db.session.commit()
     initialization_timer = threading.Timer(60, _initialize_database, args=(app,))
     initialization_timer.daemon = True

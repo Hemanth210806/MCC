@@ -50,8 +50,14 @@ def get_model(model_path: Optional[str] = None):
 
     if not model_path:
         env_path = os.environ.get('ML_MODEL_PATH')
+        if env_path:
+            if not os.path.exists(env_path):
+                print(f"[Inference] Configured model path not found at {env_path}. Fallback mode active.")
+                _model = None
+                _class_indices = {0: 'garbage_waste', 1: 'pothole', 2: 'streetlight'}
+                return _model, _class_indices
+            model_path = env_path
         candidates = [
-            env_path,
             os.path.join(os.path.dirname(__file__), 'model', 'civic_issue_mobilenetv2.keras'),
             os.path.join(PROJECT_ROOT, 'models', 'mcc_mobilenetv2.keras'),
             os.path.join(PROJECT_ROOT, 'backend', 'ml', 'model', 'civic_issue_mobilenetv2.keras'),

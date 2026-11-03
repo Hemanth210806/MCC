@@ -162,7 +162,49 @@ def create_app(config_name='development'):
     with app.app_context():
         db.create_all()
     _ensure_staff_accounts(app)
-    threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
+    with app.app_context():
+        from app.models.department import Category, CategoryDepartmentMap, Department
+        from app.models.ward import Ward
+        import json
+        wards_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'mysuru_wards.geojson')
+        if os.path.exists(wards_file):
+            with open(wards_file, 'r', encoding='utf-8') as file:
+                ward_data = json.load(file)
+            for feature in ward_data.get('features', []):
+                properties = feature['properties']
+                ward = Ward.query.filter_by(ward_number=properties['ward_number']).first()
+                if not ward:
+                    db.session.add(Ward(
+                        ward_number=properties['ward_number'],
+                        ward_name=properties['ward_name'],
+                        geometry=feature['geometry'],
+                    ))
+            db.session.commit()
+        category_departments = (
+            ("Garbage / Waste", "Solid Waste Management"),
+            ("Pothole / Road Damage", "Roads & Infrastructure"),
+            ("Streetlight Failure", "Electrical & Street Lighting"),
+            ("Water Leakage", "Water Supply & Sewerage"),
+        )
+        for category_name, department_name in category_departments:
+            category = Category.query.filter_by(name=category_name).first()
+            if not category:
+                category = Category(name=category_name)
+                db.session.add(category)
+                db.session.flush()
+            department = Department.query.filter_by(name=department_name).first()
+            if department and not CategoryDepartmentMap.query.filter_by(
+                category_id=category.id,
+                department_id=department.id,
+            ).first():
+                db.session.add(CategoryDepartmentMap(
+                    category_id=category.id,
+                    department_id=department.id,
+                ))
+        db.session.commit()
+    initialization_timer = threading.Timer(60, _initialize_database, args=(app,))
+    initialization_timer.daemon = True
+    initialization_timer.start()
 
     # Determine frontend build directory (local development or production on Render).
     # Prefer the actual frontend build over any stale backend dist folder so the app

@@ -16,6 +16,7 @@ class Config:
     os.makedirs(_default_db_dir, exist_ok=True)
     DATABASE_URL = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(_default_db_dir, 'mcc.db')}")
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'timeout': 30}} if DATABASE_URL.startswith('sqlite') else {}
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Uploads

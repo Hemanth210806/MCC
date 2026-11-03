@@ -202,7 +202,9 @@ def create_app(config_name='development'):
                     department_id=department.id,
                 ))
         db.session.commit()
-    threading.Thread(target=_initialize_database, args=(app,), daemon=True).start()
+    initialization_timer = threading.Timer(60, _initialize_database, args=(app,))
+    initialization_timer.daemon = True
+    initialization_timer.start()
 
     # Determine frontend build directory (local development or production on Render).
     # Prefer the actual frontend build over any stale backend dist folder so the app

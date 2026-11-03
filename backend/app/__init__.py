@@ -1,5 +1,4 @@
 import os
-import threading
 from flask import Flask, send_from_directory
 from app.config import config_by_name
 from app.extensions import db, cors
@@ -222,10 +221,6 @@ def create_app(config_name='development'):
                 worker.department_id = department.id
                 worker.set_password('Worker@123')
         db.session.commit()
-    initialization_timer = threading.Timer(60, _initialize_database, args=(app,))
-    initialization_timer.daemon = True
-    initialization_timer.start()
-
     # Determine frontend build directory (local development or production on Render).
     # Prefer the actual frontend build over any stale backend dist folder so the app
     # does not keep serving an older compiled bundle after a rebuild.

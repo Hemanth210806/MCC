@@ -4,8 +4,52 @@ import jwt
 from flask import Blueprint, request, jsonify, current_app
 from app.extensions import db
 from app.models.user import User
+from app.models.department import Department
+from app.models.ward import Ward
+import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+WORKER_DEPARTMENTS = {
+    'waste': 'Solid Waste Management',
+    'road': 'Roads & Infrastructure',
+    'street': 'Electrical & Street Lighting',
+    'water': 'Water Supply & Sewerage',
+}
+
+
+def _provision_worker_login(email, password):
+    if password != 'Worker@123' or not email.endswith('@mcc.gov.in'):
+        return None
+    local_part = email[:-len('@mcc.gov.in')]
+    match = re.fullmatch(r'(.+?)_(waste|road|street|water)', local_part)
+    if not match:
+        return None
+    ward_key, department_slug = match.groups()
+    ward = next(
+        (
+            candidate for candidate in Ward.query.all()
+            if re.sub(r'[^a-z0-9]+', '_', candidate.ward_name.lower()).strip('_') == ward_key
+        ),
+        None,
+    )
+    department = Department.query.filter_by(
+        name=WORKER_DEPARTMENTS[department_slug]
+    ).first()
+    if not ward or not department:
+        return None
+    worker = User.query.filter_by(email=email).first()
+    if not worker:
+        worker = User(email=email)
+        db.session.add(worker)
+    worker.name = f'{ward.ward_name} {department_slug.title()} Worker'
+    worker.phone = f'98{ward.ward_number:03d}99001'
+    worker.role = 'ward_worker'
+    worker.ward_id = ward.id
+    worker.department_id = department.id
+    worker.set_password(password)
+    db.session.commit()
+    return worker
 
 def generate_jwt(user: User) -> str:
     payload = {
@@ -71,6 +115,8 @@ def login():
         return jsonify({'error': 'Email and password are required'}), 400
 
     user = User.query.filter_by(email=email).first()
+    if not user:
+        user = _provision_worker_login(email, password)
     if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid email or password'}), 401
 

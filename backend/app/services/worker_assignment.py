@@ -6,10 +6,38 @@ from app.models.complaint import Complaint
 from app.models.department import Department
 from app.models.user import User
 from app.models.ward import Ward
+from app.extensions import db
 from app.utils.geo import haversine_distance_meters
 
 
 ACTIVE_WORK_STATUSES = ("ASSIGNED", "IN_PROGRESS", "OVERDUE", "REOPENED")
+WORKER_DEPARTMENT_SLUGS = {
+    "Solid Waste Management": "waste",
+    "Roads & Infrastructure": "road",
+    "Electrical & Street Lighting": "street",
+    "Water Supply & Sewerage": "water",
+}
+
+
+def _ensure_ward_worker(ward: Ward, department: Department) -> User:
+    department_slug = WORKER_DEPARTMENT_SLUGS.get(department.name, "general")
+    normalized_ward_name = "".join(
+        character.lower() if character.isalnum() else "_"
+        for character in ward.ward_name
+    ).strip("_")
+    email = f"{normalized_ward_name}_{department_slug}@mcc.gov.in"
+    worker = User.query.filter_by(email=email).first()
+    if not worker:
+        worker = User(email=email)
+        db.session.add(worker)
+    worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
+    worker.phone = f"98{ward.ward_number:03d}99001"
+    worker.role = "ward_worker"
+    worker.ward_id = ward.id
+    worker.department_id = department.id
+    worker.set_password("Worker@123")
+    db.session.flush()
+    return worker
 
 
 def _ward_distance_meters(
@@ -89,6 +117,9 @@ def select_worker(
     same_ward_workers = [
         worker for worker in workers if ward and worker.ward_id == ward.id
     ]
+    if ward and not same_ward_workers:
+        same_ward_workers = [_ensure_ward_worker(ward, department)]
+        workers.append(same_ward_workers[0])
     free_same_ward = [
         worker for worker in same_ward_workers if worker.id not in busy_worker_ids
     ]

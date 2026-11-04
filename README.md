@@ -117,6 +117,24 @@ Tests cover:
 - **Frontend:** Build static bundle using `npm run build` and deploy to Vercel, Netlify, Cloudflare Pages, or AWS S3 + CloudFront.
 - **Storage:** For cloud production, swap local `/uploads` in `StorageService` for AWS S3 or Google Cloud Storage.
 
+### Render data persistence
+
+Do not run the Render backend with the default container filesystem for production
+data. Render replaces that filesystem during deploys and restarts, so SQLite
+databases and uploaded complaint photos stored there are lost.
+
+Choose one of these configurations:
+
+1. **Recommended:** create a managed PostgreSQL database in Render and set the
+   backend `DATABASE_URL` environment variable to its Internal Database URL.
+2. **SQLite:** attach a Render persistent disk mounted at `/var/data`, then set
+   `MCC_DATA_DIR=/var/data` and `RENDER=true` on the backend service.
+
+The application stores `mcc.db` and uploads below `MCC_DATA_DIR` when
+`DATABASE_URL` is not set. Existing complaints cannot be recovered from an
+ephemeral instance after Render has already removed its filesystem; restore them
+from a database backup if one is available.
+
 ---
 
 &copy; 2026 Mysuru City Corporation. AI-Powered Civic Connect System.

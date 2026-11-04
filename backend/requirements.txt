@@ -2,6 +2,7 @@ Flask==3.0.3
 Flask-Cors==4.0.0
 Flask-SQLAlchemy==3.1.1
 PyMySQL==1.1.0
+psycopg2-binary>=2.9.9
 PyJWT==2.8.0
 bcrypt==4.1.2
 shapely==2.0.3
@@ -16,4 +17,3 @@ Alembic>=1.13.0
 gunicorn>=21.2.0
 tensorflow-cpu>=2.15.0
 keras>=3.0.0
-

@@ -15,3 +15,4 @@ pytest>=8.0.0
 Alembic>=1.13.0
 gunicorn>=21.2.0
 tflite-runtime==2.14.0
+psycopg2-binary>=2.9.9

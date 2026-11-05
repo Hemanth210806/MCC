@@ -117,17 +117,23 @@ def _ensure_staff_accounts(app):
             ("Vijay Bhaskar", "elec.officer@mcc.gov.in", "9880044001", "field_officer", departments["Electrical & Street Lighting"], "Officer@123"),
             ("Manjunath Swamy", "water.officer@mcc.gov.in", "9880055001", "field_officer", departments["Water Supply & Sewerage"], "Officer@123"),
         )
+        existing_users = {u.email: u for u in User.query.filter(User.role.in_(['admin', 'field_officer'])).all()}
+        added = False
         for name, email, phone, role, department, password in accounts:
-            user = User.query.filter_by(email=email).first()
+            user = existing_users.get(email)
             if not user:
-                user = User(email=email)
+                user = User(
+                    name=name,
+                    email=email,
+                    phone=phone,
+                    role=role,
+                    department_id=department.id if department else None,
+                )
+                user.set_password(password)
                 db.session.add(user)
-            user.name = name
-            user.phone = phone
-            user.role = role
-            user.department_id = department.id if department else None
-            user.set_password(password)
-        db.session.commit()
+                added = True
+        if added:
+            db.session.commit()
 
 def create_app(config_name='development'):
     app = Flask(__name__, static_folder='static')
@@ -158,71 +164,88 @@ def create_app(config_name='development'):
     app.register_blueprint(corporator_bp)
     app.register_blueprint(admin_bp)
 
-    with app.app_context():
-        db.create_all()
-    _ensure_staff_accounts(app)
-    with app.app_context():
-        from app.models.department import Category, CategoryDepartmentMap, Department
-        from app.models.user import User
-        from app.models.ward import Ward
-        from app.services.worker_assignment import ensure_all_ward_department_workers
-        import json
-        wards_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'mysuru_wards.geojson')
-        if os.path.exists(wards_file):
-            with open(wards_file, 'r', encoding='utf-8') as file:
-                ward_data = json.load(file)
-            for feature in ward_data.get('features', []):
-                properties = feature['properties']
-                ward = Ward.query.filter_by(ward_number=properties['ward_number']).first()
-                if not ward:
-                    db.session.add(Ward(
-                        ward_number=properties['ward_number'],
-                        ward_name=properties['ward_name'],
-                        geometry=feature['geometry'],
-                    ))
-            db.session.commit()
+    if config_name != 'testing':
+        with app.app_context():
+            db.create_all()
+        _ensure_staff_accounts(app)
+        with app.app_context():
+            from app.models.department import Category, CategoryDepartmentMap, Department
+            from app.models.user import User
+            from app.models.ward import Ward
+            from app.services.worker_assignment import ensure_all_ward_department_workers
+            import json
+            wards_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'mysuru_wards.geojson')
+            existing_ward_numbers = {w[0] for w in db.session.query(Ward.ward_number).all()}
+            if len(existing_ward_numbers) < 65 and os.path.exists(wards_file):
+                with open(wards_file, 'r', encoding='utf-8') as file:
+                    ward_data = json.load(file)
+                wards_to_add = []
+                for feature in ward_data.get('features', []):
+                    properties = feature['properties']
+                    wno = properties['ward_number']
+                    if wno not in existing_ward_numbers:
+                        new_w = Ward(
+                            ward_number=wno,
+                            ward_name=properties['ward_name'],
+                            geometry=feature['geometry'],
+                        )
+                        wards_to_add.append(new_w)
+                        existing_ward_numbers.add(wno)
+                if wards_to_add:
+                    db.session.add_all(wards_to_add)
+                    db.session.commit()
             ensure_all_ward_department_workers()
-        category_departments = (
-            ("Garbage / Waste", "Solid Waste Management"),
-            ("Pothole / Road Damage", "Roads & Infrastructure"),
-            ("Streetlight Failure", "Electrical & Street Lighting"),
-            ("Water Leakage", "Water Supply & Sewerage"),
-        )
-        for category_name, department_name in category_departments:
-            category = Category.query.filter_by(name=category_name).first()
-            if not category:
-                category = Category(name=category_name)
-                db.session.add(category)
-                db.session.flush()
-            department = Department.query.filter_by(name=department_name).first()
-            if department and not CategoryDepartmentMap.query.filter_by(
-                category_id=category.id,
-                department_id=department.id,
-            ).first():
-                db.session.add(CategoryDepartmentMap(
+            category_departments = (
+                ("Garbage / Waste", "Solid Waste Management"),
+                ("Pothole / Road Damage", "Roads & Infrastructure"),
+                ("Streetlight Failure", "Electrical & Street Lighting"),
+                ("Water Supply & Sewerage", "Water Supply & Sewerage"),
+                ("Water Leakage", "Water Supply & Sewerage"),
+            )
+            existing_cats = {c.name: c for c in Category.query.all()}
+            existing_depts = {d.name: d for d in Department.query.all()}
+            for category_name, department_name in category_departments:
+                category = existing_cats.get(category_name)
+                if not category:
+                    category = Category(name=category_name)
+                    db.session.add(category)
+                    db.session.flush()
+                    existing_cats[category_name] = category
+                department = existing_depts.get(department_name)
+                if department and not CategoryDepartmentMap.query.filter_by(
                     category_id=category.id,
                     department_id=department.id,
-                ))
-        db.session.commit()
-        demo_workers = (
-            ("Agrahara Ward Worker", "agrahara.worker@mcc.gov.in", "9880022102", "Agrahara", "Solid Waste Management"),
-            ("Vidhyaranyapuram Ward Worker", "vidhya.worker@mcc.gov.in", "9880033102", "Vidhyaranyapuram", "Roads & Infrastructure"),
-        )
-        for name, email, phone, ward_name, department_name in demo_workers:
-            ward = Ward.query.filter(Ward.ward_name.in_((ward_name, f"{ward_name}puram"))).first()
-            department = Department.query.filter_by(name=department_name).first()
-            if ward and department:
-                worker = User.query.filter_by(email=email).first()
-                if not worker:
-                    worker = User(email=email)
+                ).first():
+                    db.session.add(CategoryDepartmentMap(
+                        category_id=category.id,
+                        department_id=department.id,
+                    ))
+            db.session.commit()
+            demo_workers = (
+                ("Agrahara Ward Worker", "agrahara.worker@mcc.gov.in", "9880022102", "Agrahara", "Solid Waste Management"),
+                ("Vidhyaranyapuram Ward Worker", "vidhya.worker@mcc.gov.in", "9880033102", "Vidhyaranyapuram", "Roads & Infrastructure"),
+            )
+            existing_demo_emails = {u.email: u for u in User.query.filter(User.email.in_([w[1] for w in demo_workers])).all()}
+            demo_added = False
+            for name, email, phone, ward_name, department_name in demo_workers:
+                if email in existing_demo_emails:
+                    continue
+                ward = Ward.query.filter(Ward.ward_name.in_((ward_name, f"{ward_name}puram"))).first()
+                department = Department.query.filter_by(name=department_name).first()
+                if ward and department:
+                    worker = User(
+                        name=name,
+                        email=email,
+                        phone=phone,
+                        role='ward_worker',
+                        ward_id=ward.id,
+                        department_id=department.id
+                    )
+                    worker.set_password('Worker@123')
                     db.session.add(worker)
-                worker.name = name
-                worker.phone = phone
-                worker.role = 'ward_worker'
-                worker.ward_id = ward.id
-                worker.department_id = department.id
-                worker.set_password('Worker@123')
-        db.session.commit()
+                    demo_added = True
+            if demo_added:
+                db.session.commit()
     # Determine frontend build directory (local development or production on Render).
     # Prefer the actual frontend build over any stale backend dist folder so the app
     # does not keep serving an older compiled bundle after a rebuild.

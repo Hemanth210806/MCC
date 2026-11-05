@@ -20,7 +20,7 @@ WORKER_DEPARTMENT_SLUGS = {
 _WORKER_PASSWORD_HASH = None
 
 
-def _ensure_ward_worker(ward: Ward, department: Department) -> User:
+def _ensure_ward_worker(ward: Ward, department: Department, existing_workers: Optional[dict] = None) -> User:
     global _WORKER_PASSWORD_HASH
     department_slug = WORKER_DEPARTMENT_SLUGS.get(department.name, "general")
     normalized_ward_name = "".join(
@@ -28,22 +28,25 @@ def _ensure_ward_worker(ward: Ward, department: Department) -> User:
         for character in ward.ward_name
     ).strip("_")
     email = f"{normalized_ward_name}_{department_slug}@mcc.gov.in"
-    worker = User.query.filter_by(email=email).first()
+    if existing_workers is not None:
+        worker = existing_workers.get(email)
+    else:
+        worker = User.query.filter_by(email=email).first()
     if not worker:
         worker = User(email=email)
-        db.session.add(worker)
-    worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
-    worker.phone = f"98{ward.ward_number:03d}99001"
-    worker.role = "ward_worker"
-    worker.ward_id = ward.id
-    worker.department_id = department.id
-    if not worker.password_hash:
+        worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
+        worker.phone = f"98{ward.ward_number:03d}99001"
+        worker.role = "ward_worker"
+        worker.ward_id = ward.id
+        worker.department_id = department.id
         if _WORKER_PASSWORD_HASH is None:
             worker.set_password("Worker@123")
             _WORKER_PASSWORD_HASH = worker.password_hash
         else:
             worker.password_hash = _WORKER_PASSWORD_HASH
-    db.session.flush()
+        db.session.add(worker)
+        if existing_workers is not None:
+            existing_workers[email] = worker
     return worker
 
 
@@ -55,12 +58,20 @@ def ensure_all_ward_department_workers() -> None:
         department.name: department
         for department in Department.query.all()
     }
+    existing_workers = {u.email: u for u in User.query.filter_by(role="ward_worker").all()}
+    if len(existing_workers) >= len(WORKER_DEPARTMENT_SLUGS) * 65:
+        return
+
+    added = False
     for ward in Ward.query.order_by(Ward.ward_number).all():
         for department_name in WORKER_DEPARTMENT_SLUGS:
             department = departments.get(department_name)
             if department:
-                _ensure_ward_worker(ward, department)
-    db.session.commit()
+                w = _ensure_ward_worker(ward, department, existing_workers=existing_workers)
+                if w:
+                    added = True
+    if added:
+        db.session.commit()
 
 
 def _ward_distance_meters(

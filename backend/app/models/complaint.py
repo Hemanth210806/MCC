@@ -1,6 +1,12 @@
 from datetime import datetime
 from app.extensions import db
 
+def _format_utc(dt):
+    if not dt:
+        return None
+    s = dt.isoformat()
+    return s if ('+' in s or s.endswith('Z')) else s + 'Z'
+
 class Complaint(db.Model):
     __tablename__ = 'complaints'
 
@@ -81,20 +87,20 @@ class Complaint(db.Model):
             'assigned_worker_id': self.assigned_worker_id,
             'assigned_worker_name': self.assigned_worker.name if self.assigned_worker else None,
             'assigned_worker_phone': self.assigned_worker.phone if self.assigned_worker else None,
-            'assigned_at': self.assigned_at.isoformat() if self.assigned_at else None,
+            'assigned_at': _format_utc(self.assigned_at),
             'progress_percent': self.progress_percent or 0,
             'progress_note': self.progress_note,
-            'progress_updated_at': self.progress_updated_at.isoformat() if self.progress_updated_at else None,
+            'progress_updated_at': _format_utc(self.progress_updated_at),
             'priority': self.priority,
             'priority_score': self.priority_score,
             'priority_reasons': self.priority_reasons or [],
             'status': self.status,
             'report_count': self.report_count or 1,
             'merged_into_complaint_id': self.merged_into_complaint_id,
-            'sla_due_at': self.sla_due_at.isoformat() if self.sla_due_at else None,
+            'sla_due_at': _format_utc(self.sla_due_at),
             'is_demo_data': self.is_demo_data,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_at': _format_utc(self.created_at),
+            'updated_at': _format_utc(self.updated_at),
             'images': [img.to_dict() for img in self.images],
             'resolution_evidence': self.resolution_evidence.to_dict() if self.resolution_evidence else None,
             'feedback': self.feedback.to_dict() if self.feedback else None
@@ -123,7 +129,7 @@ class ComplaintImage(db.Model):
             'complaint_id': self.complaint_id,
             'image_path': self.image_path,
             'image_type': self.image_type,
-            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
+            'uploaded_at': _format_utc(self.uploaded_at)
         }
 
 class ComplaintStatusHistory(db.Model):
@@ -148,7 +154,7 @@ class ComplaintStatusHistory(db.Model):
             'changed_by_user_id': self.changed_by_user_id,
             'changed_by_user_name': self.changed_by_user.name if self.changed_by_user else 'System/Citizen',
             'remarks': self.remarks,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': _format_utc(self.created_at)
         }
 
 class Feedback(db.Model):
@@ -166,5 +172,5 @@ class Feedback(db.Model):
             'complaint_id': self.complaint_id,
             'rating': self.rating,
             'comment': self.comment,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': _format_utc(self.created_at)
         }

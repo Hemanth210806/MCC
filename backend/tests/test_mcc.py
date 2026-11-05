@@ -271,7 +271,7 @@ def test_worker_assignment_prefers_free_nearby_worker_and_releases_resolved_work
         db.session.add(nearby_complaint)
         db.session.commit()
         selected = select_worker(source_ward, department, 12.305, 76.645)
-        assert selected is None
+        assert selected.id == source_worker.id
 
 # ----------------- 5. SLA Due Date & Transition Tests -----------------
 def test_sla_due_date(app):

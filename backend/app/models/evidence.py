@@ -1,6 +1,12 @@
 from datetime import datetime
 from app.extensions import db
 
+def _format_utc(dt):
+    if not dt:
+        return None
+    s = dt.isoformat()
+    return s if ('+' in s or s.endswith('Z')) else s + 'Z'
+
 class ResolutionEvidence(db.Model):
     __tablename__ = 'resolution_evidence'
 
@@ -33,10 +39,10 @@ class ResolutionEvidence(db.Model):
             'longitude': self.longitude,
             'gps_accuracy_m': self.gps_accuracy_m,
             'distance_from_original_m': round(self.distance_from_original_m, 1),
-            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
+            'submitted_at': _format_utc(self.submitted_at),
             'verified_by_admin_id': self.verified_by_admin_id,
             'verified_by_admin_name': self.admin.name if self.admin else None,
             'verification_status': self.verification_status,
             'verification_notes': self.verification_notes,
-            'verified_at': self.verified_at.isoformat() if self.verified_at else None
+            'verified_at': _format_utc(self.verified_at)
         }

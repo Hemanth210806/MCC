@@ -426,7 +426,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   Ward: <strong>{c.ward_name}</strong> | Dept: <strong>{c.department_name}</strong>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#dc2626', marginTop: '6px' }}>
-                  SLA Target Due: {new Date(c.sla_due_at).toLocaleString()}
+                  SLA Target Due: {formatDateTime(c.sla_due_at)}
                 </div>
               </div>
             ))}

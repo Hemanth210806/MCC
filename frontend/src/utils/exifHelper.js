@@ -365,9 +365,15 @@ export async function stampGeotagOnImage(file, { latitude, longitude, wardName, 
 export function formatDateTime(isoString) {
   if (!isoString) return 'N/A';
   try {
-    const d = new Date(isoString);
+    let raw = String(isoString).trim();
+    // Normalize date strings without timezone indicator to UTC
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(raw)) {
+      raw = raw.replace(' ', 'T') + 'Z';
+    }
+    const d = new Date(raw);
     if (isNaN(d.getTime())) return isoString;
     return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       year: 'numeric',

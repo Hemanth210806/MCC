@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ComplaintCard from '../components/ComplaintCard';
 import api from '../services/api';
 import { BarChart3, Bell, CheckCircle2, AlertTriangle, ShieldCheck, Clock, Activity } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
 
 export default function CorporatorDashboard() {
   const { user } = useAuth();
@@ -151,7 +152,7 @@ export default function CorporatorDashboard() {
                       {n.message}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
-                      {new Date(n.created_at).toLocaleString()}
+                      {formatDateTime(n.created_at)}
                     </div>
                   </div>
                 </div>

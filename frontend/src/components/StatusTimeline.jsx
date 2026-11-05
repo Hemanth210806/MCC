@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Clock, AlertCircle, FileCheck, RefreshCw } from 'lucide-react';
+import { formatDateTime } from '../utils/exifHelper';
 
 const STEPS = [
   { key: 'SUBMITTED', label: 'Submitted' },
@@ -105,7 +106,7 @@ export default function StatusTimeline({ currentStatus, timeline = [] }) {
                   {item.new_status}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: '#5e6654' }}>
-                  {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                  {item.created_at ? formatDateTime(item.created_at) : ''}
                 </span>
               </div>
               {item.remarks && (

@@ -342,7 +342,7 @@ def file_complaint():
         'assigned_worker_phone': assigned_worker.phone if assigned_worker else None,
         'priority': priority_level,
         'priority_reasons': priority_reasons,
-        'sla_due_at': sla_due.isoformat(),
+        'sla_due_at': (sla_due.isoformat() + 'Z') if sla_due else None,
         'tracking_url': f"/track?code={complaint.complaint_code}&phone={citizen_phone or ''}"
     }), 201
 

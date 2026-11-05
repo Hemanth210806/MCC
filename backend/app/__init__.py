@@ -251,8 +251,8 @@ def create_app(config_name='development'):
     # does not keep serving an older compiled bundle after a rebuild.
     backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     possible_dist_dirs = [
-        os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'dist')),
         os.path.join(backend_dir, 'dist'),
+        os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'dist')),
         os.path.join(backend_dir, 'frontend_dist')
     ]
     frontend_dist = next((d for d in possible_dist_dirs if os.path.exists(d) and os.path.exists(os.path.join(d, 'index.html'))), None)

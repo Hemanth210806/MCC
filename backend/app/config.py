@@ -12,8 +12,11 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
     DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    if DATABASE_URL:
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+psycopg2://', 1)
+        elif DATABASE_URL.startswith('postgresql://') and not DATABASE_URL.startswith('postgresql+'):
+            DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
 
     # Data directory (supports optional MCC_DATA_DIR persistent disk mount, falling back safely)
     _mcc_data_dir = os.environ.get('MCC_DATA_DIR')

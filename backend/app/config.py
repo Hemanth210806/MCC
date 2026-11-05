@@ -11,28 +11,40 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'mcc_jwt_secret_token_key_2026')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
-    # Render's normal filesystem is ephemeral. Set MCC_DATA_DIR to the mount
-    # path of a persistent disk (for example /var/data) when using SQLite.
-    _default_db_dir = os.environ.get(
-        'MCC_DATA_DIR',
-        '/var/data' if os.environ.get('RENDER') else os.path.join(basedir, 'instance'),
-    )
-    os.makedirs(_default_db_dir, exist_ok=True)
-    DATABASE_URL = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(_default_db_dir, 'mcc.db')}")
-    if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
+    # Data directory (supports optional MCC_DATA_DIR persistent disk mount, falling back safely)
+    _mcc_data_dir = os.environ.get('MCC_DATA_DIR')
+    if _mcc_data_dir:
+        try:
+            os.makedirs(_mcc_data_dir, exist_ok=True)
+            _default_db_dir = _mcc_data_dir
+        except (PermissionError, OSError):
+            _default_db_dir = os.path.join(basedir, 'instance')
+            os.makedirs(_default_db_dir, exist_ok=True)
+    else:
+        _default_db_dir = os.path.join(basedir, 'instance')
+        os.makedirs(_default_db_dir, exist_ok=True)
+
+    if not DATABASE_URL:
+        DATABASE_URL = f"sqlite:///{os.path.join(_default_db_dir, 'mcc.db')}"
+
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'timeout': 30}} if DATABASE_URL.startswith('sqlite') else {}
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Uploads
-    _default_upload_folder = (
-        os.path.join(_default_db_dir, 'uploads')
-        if os.environ.get('RENDER') or os.environ.get('MCC_DATA_DIR')
-        else os.path.join(basedir, 'app/static/uploads')
-    )
-    _upload_folder = os.environ.get('UPLOAD_FOLDER', _default_upload_folder)
-    UPLOAD_FOLDER = _upload_folder if os.path.isabs(_upload_folder) else os.path.join(basedir, _upload_folder)
+    _upload_folder = os.environ.get('UPLOAD_FOLDER')
+    if not _upload_folder:
+        _upload_folder = os.path.join(_default_db_dir, 'uploads') if os.environ.get('MCC_DATA_DIR') else os.path.join(basedir, 'app/static/uploads')
+    try:
+        UPLOAD_FOLDER = _upload_folder if os.path.isabs(_upload_folder) else os.path.join(basedir, _upload_folder)
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    except (PermissionError, OSError):
+        UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_UPLOAD_MB', 5)) * 1024 * 1024
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 

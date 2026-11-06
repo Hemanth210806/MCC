@@ -621,3 +621,52 @@ def test_startup_backfills_existing_complaint_assignment(app):
             new_status="ASSIGNED",
         ).all()
         assert len(assignment_history) == 1
+
+def test_uploaded_photo_persists_across_filesystem_reload(client, app):
+    from io import BytesIO
+    from PIL import Image
+    from app.models.stored_file import StoredFile
+    from app.services.storage_service import storage_service
+
+    img_byte_arr = BytesIO()
+    Image.new('RGB', (64, 64), color='blue').save(img_byte_arr, format='JPEG')
+    dummy_bytes = img_byte_arr.getvalue()
+    img_byte_arr.seek(0)
+
+    data = {
+        'photo': (img_byte_arr, 'persistent_test_issue.jpg'),
+        'latitude': '12.2785',
+        'longitude': '76.6520',
+        'citizen_phone': '9845012345',
+        'description': 'Test persistent photo recovery'
+    }
+
+    res = client.post('/api/complaints', data=data, content_type='multipart/form-data')
+    assert res.status_code == 201
+    code = res.get_json()['complaint_code']
+
+    track_res = client.get(f'/api/complaints/track?code={code}&phone=9845012345')
+    assert track_res.status_code == 200
+    images = track_res.get_json()['complaint']['images']
+    assert len(images) > 0
+    photo_rel_path = images[0]['image_path']
+
+    # Verify StoredFile saved the bytes in DB
+    stored = StoredFile.find_file(photo_rel_path)
+    assert stored is not None
+    assert stored.file_data == dummy_bytes
+
+    # Now SIMULATE container reload/disk wipe by deleting the physical file from disk
+    photo_abs_path = storage_service.get_absolute_path(photo_rel_path)
+    if os.path.exists(photo_abs_path):
+        os.remove(photo_abs_path)
+    assert not os.path.exists(photo_abs_path)
+
+    # Request the image via the static upload route
+    img_resp = client.get(photo_rel_path)
+    assert img_resp.status_code == 200
+    assert img_resp.data == dummy_bytes
+
+    # Verify the file was re-hydrated back to disk for local caching
+    assert os.path.exists(photo_abs_path)
+

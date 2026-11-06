@@ -6,6 +6,7 @@ from app.models.complaint import Complaint, ComplaintImage, ComplaintStatusHisto
 from app.models.evidence import ResolutionEvidence
 from app.models.notification import Notification
 from app.models.analytics import Hotspot, RecurringIssue, SlaRule, AuditLog
+from app.models.stored_file import StoredFile
 
 __all__ = [
     'User',
@@ -23,5 +24,6 @@ __all__ = [
     'Hotspot',
     'RecurringIssue',
     'SlaRule',
-    'AuditLog'
+    'AuditLog',
+    'StoredFile'
 ]

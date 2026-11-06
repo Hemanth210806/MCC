@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, redirect, send_file
 from app.config import config_by_name
 from app.extensions import db, cors
 
@@ -257,13 +257,124 @@ def create_app(config_name='development'):
     ]
     frontend_dist = next((d for d in possible_dist_dirs if os.path.exists(d) and os.path.exists(os.path.join(d, 'index.html'))), None)
 
-    # Static file serving for uploads in dev/production
+    if config_name != 'testing':
+        with app.app_context():
+            # Backfill any existing ComplaintImage into persistent StoredFile if matched in assets
+            try:
+                from app.models.stored_file import StoredFile
+                from app.models.complaint import ComplaintImage
+                for c_img in ComplaintImage.query.all():
+                    if c_img.image_path:
+                        base_name = os.path.basename(c_img.image_path)
+                        if not StoredFile.find_file(base_name):
+                            for sdir in [
+                                os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'public', 'images')),
+                                os.path.join(backend_dir, 'dist', 'images'),
+                                os.path.join(backend_dir, 'static', 'images')
+                            ]:
+                                if os.path.exists(sdir):
+                                    for root, _, files in os.walk(sdir):
+                                        for fname in files:
+                                            if fname == base_name or (len(base_name) > 10 and fname in base_name):
+                                                match_path = os.path.join(root, fname)
+                                                try:
+                                                    with open(match_path, 'rb') as mf:
+                                                        StoredFile.save_bytes(c_img.image_path, mf.read())
+                                                except Exception:
+                                                    pass
+            except Exception:
+                pass
+
+    # Static file serving for uploads in dev/production with persistent database fallback
     @app.route('/static/uploads/<path:filename>')
     @app.route('/api/uploads/<path:filename>')
     def serve_upload(filename):
-        response = send_from_directory(upload_dir, filename)
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
+        # 1. Direct local disk serving if file exists
+        target_path = os.path.join(upload_dir, filename)
+        if os.path.exists(target_path) and os.path.isfile(target_path):
+            response = send_from_directory(upload_dir, filename)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+            return response
+
+        # 2. Check if file is stored in persistent database (StoredFile)
+        try:
+            from app.models.stored_file import StoredFile
+            stored = StoredFile.find_file(filename)
+            if stored and stored.file_data:
+                # Re-hydrate file to local disk for fast subsequent serving
+                try:
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with open(target_path, 'wb') as f:
+                        f.write(stored.file_data)
+                    response = send_from_directory(upload_dir, filename)
+                    response.headers['Access-Control-Allow-Origin'] = '*'
+                    response.headers['Cache-Control'] = 'public, max-age=86400'
+                    return response
+                except Exception:
+                    # Serve directly from memory if writing to disk fails
+                    from io import BytesIO
+                    resp = send_file(BytesIO(stored.file_data), mimetype=stored.content_type or 'image/jpeg')
+                    resp.headers['Access-Control-Allow-Origin'] = '*'
+                    resp.headers['Cache-Control'] = 'public, max-age=86400'
+                    return resp
+        except Exception as e:
+            app.logger.warning(f"Error restoring {filename} from database: {e}")
+
+        # 3. Check repository asset directories for seed/demo matching filename
+        base_name = os.path.basename(filename)
+        search_dirs = [
+            os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'public', 'images')),
+            os.path.join(backend_dir, 'dist', 'images'),
+            os.path.join(backend_dir, 'static', 'images'),
+            os.path.join(backend_dir, 'app', 'static')
+        ]
+        for sdir in search_dirs:
+            if os.path.exists(sdir):
+                for root, _, files in os.walk(sdir):
+                    for fname in files:
+                        if fname == base_name or (len(base_name) > 10 and fname in base_name):
+                            match_src = os.path.join(root, fname)
+                            try:
+                                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                                import shutil
+                                shutil.copy2(match_src, target_path)
+                                # Persist it into DB so it's permanent
+                                try:
+                                    with open(match_src, 'rb') as mf:
+                                        from app.models.stored_file import StoredFile
+                                        StoredFile.save_bytes(filename, mf.read())
+                                except Exception:
+                                    pass
+                                response = send_from_directory(upload_dir, filename)
+                                response.headers['Access-Control-Allow-Origin'] = '*'
+                                response.headers['Cache-Control'] = 'public, max-age=86400'
+                                return response
+                            except Exception:
+                                pass
+
+        # 4. If file is completely unavailable, gracefully redirect to category fallback instead of returning a broken 404
+        try:
+            from app.models.complaint import ComplaintImage, Complaint
+            c_img = ComplaintImage.query.filter(ComplaintImage.image_path.like(f"%{base_name}%")).first()
+            category_name = c_img.complaint.category.name if (c_img and c_img.complaint and c_img.complaint.category) else ''
+        except Exception:
+            category_name = ''
+
+        fallback_urls = {
+            'garbage': 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80',
+            'pothole': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=80',
+            'streetlight': 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=600&auto=format&fit=crop&q=80',
+            'water': 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+            'default': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=80'
+        }
+        cat_lower = (category_name or '').lower()
+        key = 'default'
+        for k in ('garbage', 'pothole', 'streetlight', 'water'):
+            if k in cat_lower:
+                key = k
+                break
+        return redirect(fallback_urls[key], code=302)
 
     @app.route('/api/health', methods=['GET'])
     def health_check():

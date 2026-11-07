@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ComplaintCard from '../components/ComplaintCard';
 import api from '../services/api';
-import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter, Calendar } from 'lucide-react';
+import { CheckSquare, Play, Upload, Camera, MapPin, AlertCircle, Clock, Filter, Calendar, Image as ImageIcon } from 'lucide-react';
 import { formatDateTime, extractExifGps } from '../utils/exifHelper';
 
 export default function OfficerDashboard({ workerMode = false }) {
@@ -270,20 +270,85 @@ export default function OfficerDashboard({ workerMode = false }) {
               <div className="form-group">
                 <label className="form-label">Resolution Work Photo (Required)</label>
                 {resolvePreview ? (
-                  <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+                  <div style={{ position: 'relative', height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px', backgroundColor: '#1f241a' }}>
                     <img src={resolvePreview} alt="Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('res-camera-input')?.click()}
+                        style={{
+                          backgroundColor: 'rgba(31, 36, 26, 0.85)',
+                          color: '#fff',
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Camera size={13} /> Retake
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('res-file-input')?.click()}
+                        style={{
+                          backgroundColor: 'rgba(31, 36, 26, 0.85)',
+                          color: '#fff',
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <ImageIcon size={13} /> Change File
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div 
-                    onClick={() => document.getElementById('res-photo-input').click()}
-                    style={{ border: '2px dashed #dcd3b8', padding: '24px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#fbf7ee' }}
-                  >
-                    <Upload size={28} style={{ color: '#94a3b8', margin: '0 auto 6px auto' }} />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4b5e28' }}>Upload Completed Work Photo</div>
+                  <div style={{ border: '2px dashed #dcd3b8', padding: '20px 16px', textAlign: 'center', borderRadius: '8px', backgroundColor: '#fbf7ee' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('res-camera-input')?.click()}
+                        className="btn btn-gold"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.85rem' }}
+                      >
+                        <Camera size={16} /> Take Live Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('res-file-input')?.click()}
+                        className="btn btn-outline"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.85rem', backgroundColor: '#fff' }}
+                      >
+                        <ImageIcon size={16} /> Choose from Gallery / Files
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#5e6654' }}>
+                      Take photo with camera or select an existing photo from device files
+                    </div>
                   </div>
                 )}
+                {/* Gallery / File Picker input (NO capture - opens gallery on mobile & files on laptop) */}
                 <input
-                  id="res-photo-input"
+                  id="res-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleResolvePhotoChange}
+                  style={{ display: 'none' }}
+                />
+                {/* Native Camera input (capture="environment") */}
+                <input
+                  id="res-camera-input"
                   type="file"
                   accept="image/*"
                   capture="environment"

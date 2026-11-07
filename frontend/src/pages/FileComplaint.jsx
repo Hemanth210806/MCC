@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView from '../components/MapView';
 import api from '../services/api';
-import { Camera, MapPin, Upload, AlertCircle, CheckCircle2, ArrowRight, Loader2, Sparkles, ShieldAlert, Layers } from 'lucide-react';
+import { Camera, MapPin, Upload, AlertCircle, CheckCircle2, ArrowRight, Loader2, Sparkles, ShieldAlert, Layers, Image as ImageIcon, X, RefreshCw } from 'lucide-react';
 import { extractExifGps, stampGeotagOnImage, formatDateTime } from '../utils/exifHelper';
 
 export default function FileComplaint({ setActivePage }) {
@@ -31,7 +31,15 @@ export default function FileComplaint({ setActivePage }) {
   // Wards GeoJSON for map display
   const [wardGeoJson, setWardGeoJson] = useState(null);
 
-  const isManualLocationRef = React.useRef(false);
+  const isManualLocationRef = useRef(false);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+
+  // Live Camera / Webcam State (Laptop / Desktop)
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState('environment');
 
   const fetchWardForPoint = async (lat, lng) => {
     try {
@@ -121,12 +129,92 @@ export default function FileComplaint({ setActivePage }) {
     }
   }, [latitude, longitude]);
 
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Webcam lifecycle for laptop / desktop live camera capture
+  useEffect(() => {
+    if (!showCameraModal) return;
+    let stream = null;
+    let active = true;
 
-    // Reset input so re-selecting the same file triggers onChange
-    e.target.value = '';
+    navigator.mediaDevices?.getUserMedia({
+      video: {
+        facingMode: cameraFacingMode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    }).then((s) => {
+      if (!active) {
+        s.getTracks().forEach(t => t.stop());
+        return;
+      }
+      stream = s;
+      setCameraStream(s);
+      if (videoRef.current) {
+        videoRef.current.srcObject = s;
+        videoRef.current.play().catch(() => {});
+      }
+    }).catch((err) => {
+      console.warn('Webcam stream error:', err);
+      alert('Could not access camera. Please allow camera permissions or upload a photo from your files.');
+      setShowCameraModal(false);
+      fileInputRef.current?.click();
+    });
+
+    return () => {
+      active = false;
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    };
+  }, [showCameraModal, cameraFacingMode]);
+
+  const isMobileDevice = () => {
+    return /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent || '');
+  };
+
+  const handleTakePhotoClick = () => {
+    if (isMobileDevice()) {
+      // On mobile devices, native camera capture gives best quality and real hardware EXIF GPS
+      cameraInputRef.current?.click();
+    } else {
+      // On laptop / desktop, open live webcam viewfinder modal
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        setShowCameraModal(true);
+      } else {
+        cameraInputRef.current?.click();
+      }
+    }
+  };
+
+  const handleCaptureWebcam = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `live_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      handleCloseCameraModal();
+      processFile(file);
+    }, 'image/jpeg', 0.92);
+  };
+
+  const handleCloseCameraModal = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+    }
+    setCameraStream(null);
+    setShowCameraModal(false);
+  };
+
+  const handleSwitchCamera = () => {
+    setCameraFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  const processFile = async (file) => {
+    if (!file) return;
 
     setErrorMsg('');
     setPhoto(file);
@@ -190,6 +278,15 @@ export default function FileComplaint({ setActivePage }) {
     } finally {
       setIsStamping(false);
     }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so re-selecting the same file triggers onChange
+    e.target.value = '';
+    await processFile(file);
   };
 
   const handleGetCurrentLocation = () => {
@@ -406,24 +503,48 @@ export default function FileComplaint({ setActivePage }) {
                     alt="Issue Preview" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
-                  <button
-                    type="button"
-                    onClick={() => { setPhoto(null); setPhotoPreview(null); setExifBadge(null); }}
-                    style={{
-                      position: 'absolute',
-                      top: '10px',
-                      right: '10px',
-                      backgroundColor: 'rgba(0,0,0,0.7)',
-                      color: '#fff',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Change Photo
-                  </button>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={handleTakePhotoClick}
+                      style={{
+                        backgroundColor: 'rgba(31, 36, 26, 0.85)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        backdropFilter: 'blur(4px)'
+                      }}
+                    >
+                      <Camera size={14} /> Retake
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        backgroundColor: 'rgba(31, 36, 26, 0.85)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        backdropFilter: 'blur(4px)'
+                      }}
+                    >
+                      <ImageIcon size={14} /> Change File
+                    </button>
+                  </div>
                   {isStamping && (
                     <div style={{
                       position: 'absolute',
@@ -463,23 +584,71 @@ export default function FileComplaint({ setActivePage }) {
             ) : (
               <div style={{
                 border: '2px dashed #dcd3b8',
-                borderRadius: '8px',
-                padding: '30px 20px',
+                borderRadius: '10px',
+                padding: '28px 16px',
                 textAlign: 'center',
-                backgroundColor: '#fbf7ee',
-                cursor: 'pointer'
-              }} onClick={() => document.getElementById('photo-input').click()}>
-                <Upload size={36} style={{ color: '#94a3b8', margin: '0 auto 10px auto' }} />
-                <div style={{ fontWeight: 600, color: '#4b5e28', fontSize: '0.95rem' }}>
-                  Click to take or upload a photo
+                backgroundColor: '#fbf7ee'
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', marginBottom: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={handleTakePhotoClick}
+                    className="btn btn-gold"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '11px 20px',
+                      fontSize: '0.92rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                    }}
+                  >
+                    <Camera size={20} /> Open Camera / Take Photo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn btn-outline"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '11px 20px',
+                      fontSize: '0.92rem',
+                      fontWeight: 600,
+                      backgroundColor: '#ffffff',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                    }}
+                  >
+                    <ImageIcon size={20} /> Upload from Gallery / Files
+                  </button>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#5e6654', marginTop: '4px' }}>
-                  Auto-extracts camera EXIF geotag & applies official MCC banner
+
+                <div style={{ fontSize: '0.82rem', color: '#5e6654', fontWeight: 500 }}>
+                  Take a live photo on mobile or laptop, or choose an existing photo from your files
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#8c957f', marginTop: '4px' }}>
+                  Auto-extracts camera EXIF GPS & applies official MCC watermark banner
                 </div>
               </div>
             )}
+            {/* Gallery / File Picker input (NO capture attribute - opens gallery/files on mobile & laptop) */}
             <input 
-              id="photo-input"
+              ref={fileInputRef}
+              id="file-input"
+              type="file" 
+              accept="image/*" 
+              onChange={handlePhotoChange} 
+              style={{ display: 'none' }} 
+            />
+            {/* Native Mobile Camera input (has capture="environment" for 1-click mobile camera) */}
+            <input 
+              ref={cameraInputRef}
+              id="camera-input"
               type="file" 
               accept="image/*" 
               capture="environment"
@@ -653,6 +822,134 @@ export default function FileComplaint({ setActivePage }) {
           </div>
         </div>
       </form>
+
+      {/* Live Camera Viewfinder Modal (Laptop / Desktop) */}
+      {showCameraModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#1f241a',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            width: '100%',
+            maxWidth: '640px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            border: '1px solid #334155'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+                <Camera size={18} style={{ color: '#d97706' }} />
+                <span>Live Camera Viewfinder</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseCameraModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Video Viewport */}
+            <div style={{ position: 'relative', width: '100%', backgroundColor: '#000', height: '360px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: '12px',
+                left: '12px',
+                backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                color: '#fff',
+                fontSize: '0.72rem',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                backdropFilter: 'blur(4px)'
+              }}>
+                📍 Location will be tagged upon capture
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{
+              padding: '16px 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#151911'
+            }}>
+              <button
+                type="button"
+                onClick={handleSwitchCamera}
+                className="btn btn-outline"
+                style={{
+                  color: '#fff',
+                  borderColor: '#475569',
+                  padding: '8px 14px',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={15} /> Switch Camera
+              </button>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleCloseCameraModal}
+                  className="btn btn-outline"
+                  style={{ color: '#cbd5e1', borderColor: '#475569', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCaptureWebcam}
+                  className="btn btn-gold"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 20px',
+                    fontSize: '0.92rem',
+                    fontWeight: 700
+                  }}
+                >
+                  <Camera size={18} /> Snap Photo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

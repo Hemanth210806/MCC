@@ -106,7 +106,7 @@ export default function StatusTimeline({ currentStatus, timeline = [] }) {
                   {item.new_status}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: '#5e6654' }}>
-                  {item.created_at ? formatDateTime(item.created_at) : ''}
+                  {item.created_at ? formatDateTime(item.created_at, { second: '2-digit' }) : ''}
                 </span>
               </div>
               {item.remarks && (

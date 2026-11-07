@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.models.ward import Ward
-from app.models.complaint import Complaint
+from app.models.complaint import Complaint, _format_utc
 from app.models.analytics import Hotspot
 from app.services.health_score_service import health_score_service
 from app.services.ward_lookup import ward_lookup_service
@@ -49,7 +49,7 @@ def get_map_data():
             'longitude': round(c.longitude, 4),
             'ward_name': c.ward.ward_name if c.ward else None,
             'ward_number': c.ward.ward_number if c.ward else None,
-            'created_at': c.created_at.isoformat() if c.created_at else None
+            'created_at': _format_utc(c.created_at)
         })
 
     return jsonify({

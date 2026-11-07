@@ -1,6 +1,12 @@
 from datetime import datetime
 from app.extensions import db
 
+def _format_utc(dt):
+    if not dt:
+        return None
+    s = dt.isoformat()
+    return s if ('+' in s or s.endswith('Z')) else s + 'Z'
+
 class Hotspot(db.Model):
     __tablename__ = 'hotspots'
 
@@ -28,7 +34,7 @@ class Hotspot(db.Model):
             'center_lng': self.center_lng,
             'complaint_count': self.complaint_count,
             'radius_m': self.radius_m,
-            'detected_at': self.detected_at.isoformat() if self.detected_at else None,
+            'detected_at': _format_utc(self.detected_at),
             'active': self.active
         }
 
@@ -56,7 +62,7 @@ class RecurringIssue(db.Model):
             'distance_m': round(self.distance_m, 1),
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
-            'detected_at': self.detected_at.isoformat() if self.detected_at else None
+            'detected_at': _format_utc(self.detected_at)
         }
 
 class SlaRule(db.Model):
@@ -94,6 +100,6 @@ class AuditLog(db.Model):
             'action': self.action,
             'entity_type': self.entity_type,
             'entity_id': self.entity_id,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'timestamp': _format_utc(self.timestamp),
             'details': self.details
         }

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from app.extensions import db
-from app.models.complaint import Complaint, ComplaintStatusHistory, ComplaintImage
+from app.models.complaint import Complaint, ComplaintStatusHistory, _format_utc, ComplaintImage
 from app.models.evidence import ResolutionEvidence
 from app.models.user import User
 from app.models.department import Department, Category, CategoryDepartmentMap
@@ -80,7 +80,7 @@ def get_verification_queue():
             'ward_number': c.ward.ward_number if c.ward else None,
             'priority': c.priority,
             'description': c.description,
-            'created_at': c.created_at.isoformat() if c.created_at else None,
+            'created_at': _format_utc(c.created_at),
             # Original details
             'original_photo': orig_img.image_path if orig_img else None,
             'original_latitude': c.latitude,
@@ -92,7 +92,7 @@ def get_verification_queue():
             'distance_from_original_m': round(ev.distance_from_original_m, 1) if ev else 0.0,
             'officer_name': ev.officer.name if ev and ev.officer else 'Field Officer',
             'officer_notes': ev.verification_notes if ev else '',
-            'submitted_at': ev.submitted_at.isoformat() if ev and ev.submitted_at else None
+            'submitted_at': _format_utc(ev.submitted_at) if ev else None
         })
     return jsonify({'queue': queue}), 200
 

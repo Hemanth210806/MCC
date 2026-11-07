@@ -324,6 +324,7 @@ export async function stampGeotagOnImage(file, { latitude, longitude, wardName, 
           const latStr = typeof latitude === 'number' ? latitude.toFixed(5) : latitude;
           const lonStr = typeof longitude === 'number' ? longitude.toFixed(5) : longitude;
           const formattedTime = timestamp || new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
             day: '2-digit',
             month: 'short',
             year: 'numeric',
@@ -361,13 +362,13 @@ export async function stampGeotagOnImage(file, { latitude, longitude, wardName, 
   });
 }
 
-// Utility to format date and time nicely across the app
-export function formatDateTime(isoString) {
+// Utility to format date and time nicely across the app in Indian Standard Time (IST)
+export function formatDateTime(isoString, options = {}) {
   if (!isoString) return 'N/A';
   try {
     let raw = String(isoString).trim();
-    // Normalize date strings without timezone indicator to UTC
-    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(raw)) {
+    // Normalize date strings without timezone indicator (e.g. '2026-11-05T15:58:19' or '2026-11-05 15:58:19') to UTC
+    if (!raw.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(raw)) {
       raw = raw.replace(' ', 'T') + 'Z';
     }
     const d = new Date(raw);
@@ -379,7 +380,8 @@ export function formatDateTime(isoString) {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      ...options
     });
   } catch {
     return isoString;

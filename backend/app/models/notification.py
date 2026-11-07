@@ -1,6 +1,12 @@
 from datetime import datetime
 from app.extensions import db
 
+def _format_utc(dt):
+    if not dt:
+        return None
+    s = dt.isoformat()
+    return s if ('+' in s or s.endswith('Z')) else s + 'Z'
+
 class Notification(db.Model):
     __tablename__ = 'notifications'
 
@@ -23,5 +29,5 @@ class Notification(db.Model):
             'complaint_code': self.complaint.complaint_code if self.complaint else None,
             'message': self.message,
             'is_read': self.is_read,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': _format_utc(self.created_at)
         }

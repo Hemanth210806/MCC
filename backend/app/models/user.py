@@ -2,6 +2,12 @@ from datetime import datetime
 import bcrypt
 from app.extensions import db
 
+def _format_utc(dt):
+    if not dt:
+        return None
+    s = dt.isoformat()
+    return s if ('+' in s or s.endswith('Z')) else s + 'Z'
+
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -37,5 +43,5 @@ class User(db.Model):
             'department_name': self.department.name if self.department else None,
             'ward_id': self.ward_id,
             'ward_name': self.ward.ward_name if self.ward else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': _format_utc(self.created_at)
         }

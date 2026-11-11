@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import api from '../services/api';
 import { 
   Lock, 
   Mail, 
@@ -19,6 +20,22 @@ import {
   Shield
 } from 'lucide-react';
 
+const ALL_65_WARDS = [
+  [1, "Hebbalu Lakshmikanthanagar"], [2, "Manchegowdanakoppalu"], [3, "Madeshwaranagara Badavane"], [4, "Hebbalu Lokanayakananagar"], [5, "Kumbarakoppalu"],
+  [6, "Gokulam,Brudhavana"], [7, "Metagali"], [8, "Bannimantapa Hudco Badavane"], [9, "Kesare"], [10, "Rajivanagara"],
+  [11, "Shanthinagara 1"], [12, "Shanthinagara 2"], [13, "Udayagiri"], [14, "Sathyanagara"], [15, "Rajendranagara"],
+  [16, "Subashnagara"], [17, "Bannimantapa"], [18, "Yadavagiri"], [19, "Jayalakshmipuram,V.V.Mohalla"], [20, "Vijayanagara 1St & 2Nd Stage"],
+  [21, "Gangothri Ward"], [22, "Padavarahalli_Vontikoppal"], [23, "Subbarayanakere"], [24, "Mandi Mohalla"], [25, "Thilaknagara"],
+  [26, "Meenabazaar"], [27, "Yeraganahalli"], [28, "Gandhinagara"], [29, "N R_Mohalla"], [30, "Kyathamaranahalli"],
+  [31, "K N Pura & Gousianagara"], [32, "Gousianagara Ablock,Usmaniya Block"], [33, "Ajizsait Nagara"], [34, "Kalyanagiri"], [35, "Sathgallai Badavane 1St Stage"],
+  [36, "Yaraganahalli, Ambedkar Colony"], [37, "Ragavendra Nagara"], [38, "Giriyabovipallya"], [39, "Gathripuram 1St Stage"], [40, "Lashkar Mohalla"],
+  [41, "Devarajamohalla"], [42, "K G Koppal"], [43, "Tk_Layout"], [44, "Janathanagara"], [45, "Sharadadevinagara"],
+  [46, "Dattagalli"], [47, "Kuvempu Nagara"], [48, "Jayanagara"], [49, "Lakshmipuram"], [50, "Sunnadakeri"],
+  [51, "Agrahara"], [52, "Ittigegudu"], [53, "Kurubarahalli"], [54, "Gunduraonagara"], [55, "Chamundipuram"],
+  [56, "Krishnamurthipuram"], [57, "Kuvempu Nagara C I T B"], [58, "Ramakrishnanagara"], [59, "Kuvempu Nagara M Block"], [60, "Ashokapuram"],
+  [61, "Vidyaranyapuram"], [62, "Vishweshwaranagara"], [63, "J P Nagara"], [64, "Aravindanagara"], [65, "Srirampura"]
+];
+
 export default function Login({ setActivePage }) {
   const { user, login, logout } = useAuth();
   const { language, t } = useLanguage();
@@ -28,6 +45,25 @@ export default function Login({ setActivePage }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // 65 Ward Workers Directory State
+  const [wardDirectory, setWardDirectory] = useState([]);
+  const [selectedWardNumber, setSelectedWardNumber] = useState(47); // Default to Ward 47: Kuvempu Nagara
+  const [selectedDeptSlug, setSelectedDeptSlug] = useState('road');
+
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/auth/ward-directory-workers')
+      .then(res => {
+        if (isMounted && res.data?.wards && res.data.wards.length > 0) {
+          setWardDirectory(res.data.wards);
+        }
+      })
+      .catch(err => {
+        console.warn('Could not load ward workers directory:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const routeByRole = (role) => {
     if (role === 'admin') setActivePage('admin-dashboard');
@@ -249,8 +285,10 @@ export default function Login({ setActivePage }) {
                   }}
                 />
               </div>
-              <div style={{ fontSize: '0.74rem', color: '#5e6654', marginTop: '4px' }}>
-                {language === 'kn' ? 'ಮಾಲೀಕರು & ಅಡ್ಮಿನ್: hemanth, owner, admin, engineer, swm, elec, water, corporator' : 'Owner & Staff aliases: hemanth, owner, admin, engineer, swm, elec, water, corporator'}
+              <div style={{ fontSize: '0.74rem', color: '#5e6654', marginTop: '4px', lineHeight: '1.4' }}>
+                {language === 'kn' 
+                  ? 'ಸಿಬ್ಬಂದಿ ಲಾಗಿನ್: hemanth, admin, engineer, swm, elec, water ಅಥವಾ ವಾರ್ಡ್ ವರ್ಕರ್ ಗುರುತು (ಉದಾ: ittigegudu_road, kuvempunagara_waste, 9805202001)' 
+                  : 'Accepted: Email, Staff ID, Aliases (admin, engineer, swm, elec, water), or Ward Worker usernames (e.g. ittigegudu_road, kuvempunagara_waste, 9805202001)'}
               </div>
             </div>
 
@@ -670,93 +708,262 @@ export default function Login({ setActivePage }) {
                 </div>
               </div>
 
-              {/* Featured ward department workers */}
+              {/* Featured & Interactive Ward Department Workers Access */}
               <div style={{
                 fontSize: '0.72rem',
                 fontWeight: 800,
                 color: '#5e6654',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
-                marginTop: '8px',
+                marginTop: '12px',
+                marginBottom: '4px'
+              }}>
+                {language === 'kn' ? 'ವಾರ್ಡ್ ಇಲಾಖಾ ಸಿಬ್ಬಂದಿ ಲಾಗಿನ್ (ಎಲ್ಲಾ ೬೫ ವಾರ್ಡ್‌ಗಳು)' : 'Ward Department Staff Access (All 65 Wards)'}
+              </div>
+
+              {/* 65-Ward Interactive Quick Selector */}
+              {(() => {
+                const currentWardItem = ALL_65_WARDS.find(w => w[0] === Number(selectedWardNumber)) || ALL_65_WARDS[46];
+                const currentWardNum = currentWardItem[0];
+                const currentWardName = currentWardItem[1];
+                const currentWardSlug = currentWardName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                
+                const liveWard = wardDirectory.find(w => w.ward_number === currentWardNum);
+                const deptKeyMap = {
+                  'waste': 'Solid Waste Management',
+                  'road': 'Roads & Infrastructure',
+                  'street': 'Electrical & Street Lighting',
+                  'water': 'Water Supply & Sewerage'
+                };
+                const liveWorker = liveWard?.workers?.find(w => w.department_name === deptKeyMap[selectedDeptSlug]);
+                const activeWorkerEmail = liveWorker?.email || `${currentWardSlug}_${selectedDeptSlug}@mcc.gov.in`;
+                const activeWorkerName = liveWorker?.name || `${currentWardName} Worker`;
+                const activeWorkerPhone = liveWorker?.phone || `98${String(currentWardNum).padStart(3, '0')}01001`;
+
+                return (
+                  <div style={{
+                    padding: '14px 16px',
+                    backgroundColor: '#ffffff',
+                    border: '1.5px solid #b8df9c',
+                    borderRadius: '10px',
+                    boxShadow: '0 2px 8px rgba(75, 94, 40, 0.08)',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#4b5e28', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📍</span>
+                        <span>{language === 'kn' ? 'ವಾರ್ಡ್ ಆಯ್ಕೆಮಾಡಿ (೧-೬೫)' : 'Select Any Mysuru Ward (1-65)'}</span>
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#68755c', backgroundColor: '#f0f6ea', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                        {language === 'kn' ? 'ಪಾಸ್‌ವರ್ಡ್: Worker@123' : 'Password: Worker@123'}
+                      </span>
+                    </div>
+
+                    {/* Ward Selector Dropdown */}
+                    <div>
+                      <select
+                        value={selectedWardNumber}
+                        onChange={(e) => setSelectedWardNumber(Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #dcd1b5',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          backgroundColor: '#fbfaf5',
+                          color: '#2a331e'
+                        }}
+                      >
+                        {ALL_65_WARDS.map(([wNum, wName]) => (
+                          <option key={wNum} value={wNum}>
+                            Ward {wNum}: {wName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Department Selector Tabs */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                      {[
+                        { slug: 'waste', label: 'Waste', icon: '🗑️' },
+                        { slug: 'road', label: 'Roads', icon: '🛣️' },
+                        { slug: 'street', label: 'Streetlight', icon: '💡' },
+                        { slug: 'water', label: 'Water', icon: '💧' },
+                      ].map((dept) => {
+                        const isSelected = selectedDeptSlug === dept.slug;
+                        return (
+                          <button
+                            key={dept.slug}
+                            type="button"
+                            onClick={() => setSelectedDeptSlug(dept.slug)}
+                            style={{
+                              padding: '8px 4px',
+                              borderRadius: '7px',
+                              border: isSelected ? '1.5px solid #4b5e28' : '1px solid #dcd1b5',
+                              backgroundColor: isSelected ? '#4b5e28' : '#faf7ee',
+                              color: isSelected ? '#ffffff' : '#3f4738',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '3px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <span>{dept.icon}</span>
+                            <span>{dept.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Resolved Worker Profile Box */}
+                    <div style={{
+                      padding: '10px 12px',
+                      backgroundColor: '#fbfaf4',
+                      border: '1px solid #e2dabf',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#38481d', wordBreak: 'break-word' }}>
+                        {activeWorkerName}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#555e4c', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <span>Email: <strong style={{ color: '#1f241a' }}>{activeWorkerEmail}</strong></span>
+                        <span>•</span>
+                        <span>Phone: <strong style={{ color: '#1f241a' }}>{activeWorkerPhone}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleInstantLogin(activeWorkerEmail, 'Worker@123')}
+                        disabled={loading}
+                        className="btn btn-olive"
+                        style={{
+                          flex: 1,
+                          padding: '9px 12px',
+                          fontSize: '0.82rem',
+                          fontWeight: 800,
+                          backgroundColor: '#4b5e28',
+                          color: '#ffffff',
+                          borderRadius: '7px',
+                          boxShadow: '0 2px 6px rgba(75, 94, 40, 0.2)'
+                        }}
+                      >
+                        ⚡ {language === 'kn' ? 'ಈ ಖಾತೆಗೆ ತಕ್ಷಣ ಲಾಗಿನ್ ಆಗಿ' : `Instant Login as Ward ${currentWardNum} Worker`}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePreFill(activeWorkerEmail, 'Worker@123')}
+                        className="btn btn-outline"
+                        style={{
+                          padding: '9px 14px',
+                          fontSize: '0.80rem',
+                          fontWeight: 700,
+                          backgroundColor: '#ffffff',
+                          borderColor: '#dcd1b5',
+                          borderRadius: '7px',
+                          color: '#4b5e28'
+                        }}
+                      >
+                        Fill
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Popular Ward Worker Quick Access Grid */}
+              <div style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: '#5e6654',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginTop: '4px',
                 marginBottom: '2px'
               }}>
-                {language === 'kn' ? 'ವಾರ್ಡ್ ಇಲಾಖಾ ಸಿಬ್ಬಂದಿ ಲಾಗಿನ್' : 'Ward Department Staff Access'}
+                {language === 'kn' ? 'ತ್ವರಿತ ಪ್ರಮುಖ ವಾರ್ಡ್ ಲಾಗಿನ್‌ಗಳು' : 'Popular Ward Workers Quick Access'}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {[
-                  { ward: 'Agrahara', slug: 'agrahara', icon: '🏛️' },
-                  { ward: 'Vidyaranyapuram', slug: 'vidyaranyapuram', icon: '🏘️' }
-                ].map((ward) => (
-                  <React.Fragment key={ward.slug}>
-                    {[
-                      { label: 'Waste Management', slug: 'waste', icon: '🗑️' },
-                      { label: 'Pothole & Roads', slug: 'road', icon: '🛣️' },
-                      { label: 'Streetlight', slug: 'street', icon: '💡' },
-                      { label: 'Water Leakage', slug: 'water', icon: '💧' }
-                    ].map((department) => {
-                      const accountEmail = `${ward.slug}_${department.slug}@mcc.gov.in`;
-                      return (
-                        <div key={accountEmail} style={{
-                          padding: '10px 12px',
-                          backgroundColor: '#fcfaf4',
-                          border: '1.5px solid #e5dcbe',
-                          borderRadius: '9px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          gap: '8px'
-                        }}>
-                          <div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#3e4e21', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>{department.icon}</span>
-                              <span>{ward.ward} {department.label}</span>
-                            </div>
-                            <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
-                              {accountEmail}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleInstantLogin(accountEmail, 'Worker@123')}
-                              disabled={loading}
-                              style={{
-                                flex: 1,
-                                padding: '6px 8px',
-                                fontSize: '0.74rem',
-                                fontWeight: 800,
-                                backgroundColor: '#4b5e28',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ⚡ Instant
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePreFill(accountEmail, 'Worker@123')}
-                              style={{
-                                padding: '6px 8px',
-                                fontSize: '0.74rem',
-                                fontWeight: 600,
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #dcd1b5',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                color: '#4b5e28'
-                              }}
-                            >
-                              Fill
-                            </button>
-                          </div>
+                  { ward: 'Kuvempu Nagara', slug: 'kuvempu_nagara', dept: 'road', label: 'Pothole & Roads', icon: '🛣️' },
+                  { ward: 'Ittigegudu', slug: 'ittigegudu', dept: 'road', label: 'Pothole & Roads', icon: '🛣️' },
+                  { ward: 'Agrahara', slug: 'agrahara', dept: 'waste', label: 'Waste Management', icon: '🗑️' },
+                  { ward: 'Vidyaranyapuram', slug: 'vidyaranyapuram', dept: 'waste', label: 'Waste Management', icon: '🗑️' },
+                ].map((item) => {
+                  const accountEmail = `${item.slug}_${item.dept}@mcc.gov.in`;
+                  return (
+                    <div key={accountEmail} style={{
+                      padding: '10px 12px',
+                      backgroundColor: '#fcfaf4',
+                      border: '1.5px solid #e5dcbe',
+                      borderRadius: '9px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '8px'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#3e4e21', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{item.icon}</span>
+                          <span>{item.ward} {item.label}</span>
                         </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                        <div style={{ fontSize: '0.70rem', color: '#5e6654', marginTop: '2px' }}>
+                          {accountEmail}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleInstantLogin(accountEmail, 'Worker@123')}
+                          disabled={loading}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            backgroundColor: '#4b5e28',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⚡ Instant
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePreFill(accountEmail, 'Worker@123')}
+                          style={{
+                            padding: '6px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #dcd1b5',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            color: '#4b5e28'
+                          }}
+                        >
+                          Fill
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Elected Corporators */}

@@ -197,6 +197,11 @@ def create_app(config_name='development'):
                     db.session.add_all(wards_to_add)
                     db.session.commit()
             ensure_all_ward_department_workers()
+            try:
+                from app.services.worker_names import update_all_worker_names_in_db
+                update_all_worker_names_in_db()
+            except Exception as e:
+                app.logger.info(f"Worker names update note: {e}")
             category_departments = (
                 ("Garbage / Waste", "Solid Waste Management"),
                 ("Pothole / Road Damage", "Roads & Infrastructure"),

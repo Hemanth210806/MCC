@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+from sqlalchemy import func
 from app.extensions import db
 from app.models.complaint import Complaint, ComplaintStatusHistory, _format_utc, ComplaintImage
 from app.models.evidence import ResolutionEvidence
@@ -20,7 +21,182 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 @roles_required('admin')
 def list_workers():
     workers = User.query.filter(User.role.in_(['ward_worker', 'field_officer'])).order_by(User.name.asc()).all()
-    return jsonify({'workers': [u.to_dict() for u in workers]}), 200
+
+    # Aggregate status counts for all workers in a single fast query
+    status_counts = db.session.query(
+        Complaint.assigned_worker_id,
+        Complaint.status,
+        func.count(Complaint.id)
+    ).filter(Complaint.assigned_worker_id.isnot(None)).group_by(
+        Complaint.assigned_worker_id, Complaint.status
+    ).all()
+
+    stats_map = {}
+    for worker_id, status, count in status_counts:
+        if worker_id not in stats_map:
+            stats_map[worker_id] = {'total': 0, 'resolved': 0, 'overdue': 0, 'remaining': 0}
+        stats_map[worker_id]['total'] += count
+        if status == 'RESOLVED':
+            stats_map[worker_id]['resolved'] += count
+        else:
+            stats_map[worker_id]['remaining'] += count
+            if status == 'OVERDUE':
+                stats_map[worker_id]['overdue'] += count
+
+    # Calculate average resolution time for resolved complaints per worker
+    resolved_complaints = Complaint.query.filter_by(status='RESOLVED').all()
+    durations_map = {}
+    for c in resolved_complaints:
+        if not c.assigned_worker_id:
+            continue
+        start_time = c.assigned_at or c.created_at
+        end_time = c.updated_at
+        if c.resolution_evidence and c.resolution_evidence.verified_at:
+            end_time = c.resolution_evidence.verified_at
+        elif c.resolution_evidence and c.resolution_evidence.submitted_at:
+            end_time = c.resolution_evidence.submitted_at
+        if start_time and end_time and end_time > start_time:
+            hours = (end_time - start_time).total_seconds() / 3600.0
+            durations_map.setdefault(c.assigned_worker_id, []).append(hours)
+
+    result = []
+    for u in workers:
+        u_dict = u.to_dict()
+        st = stats_map.get(u.id, {'total': 0, 'resolved': 0, 'overdue': 0, 'remaining': 0})
+        worker_durations = durations_map.get(u.id, [])
+        avg_hours = round(sum(worker_durations) / len(worker_durations), 1) if worker_durations else 0.0
+        avg_days = round(avg_hours / 24.0, 1)
+
+        u_dict['stats'] = {
+            'total_assigned': st['total'],
+            'resolved_count': st['resolved'],
+            'remaining_count': st['remaining'],
+            'overdue_count': st['overdue'],
+            'avg_resolution_days': avg_days,
+            'avg_resolution_hours': avg_hours,
+            'resolution_rate': round((st['resolved'] / st['total'] * 100), 1) if st['total'] > 0 else 0.0
+        }
+        result.append(u_dict)
+
+    return jsonify({'workers': result}), 200
+
+@admin_bp.route('/workers/<int:worker_id>/performance', methods=['GET'])
+@roles_required('admin')
+def get_worker_performance(worker_id):
+    worker = User.query.get_or_404(worker_id)
+    complaints = Complaint.query.filter_by(assigned_worker_id=worker.id).order_by(Complaint.updated_at.desc()).all()
+
+    total = len(complaints)
+    resolved = [c for c in complaints if c.status == 'RESOLVED']
+    remaining = [c for c in complaints if c.status in ('ASSIGNED', 'IN_PROGRESS', 'VERIFICATION_PENDING', 'OVERDUE', 'REOPENED')]
+    overdue = [c for c in complaints if c.status == 'OVERDUE']
+
+    # Calculate resolution durations
+    durations_hours = []
+    for c in resolved:
+        start_time = c.assigned_at or c.created_at
+        end_time = c.updated_at
+        if c.resolution_evidence and c.resolution_evidence.verified_at:
+            end_time = c.resolution_evidence.verified_at
+        elif c.resolution_evidence and c.resolution_evidence.submitted_at:
+            end_time = c.resolution_evidence.submitted_at
+        if start_time and end_time and end_time > start_time:
+            hours = (end_time - start_time).total_seconds() / 3600.0
+            durations_hours.append(hours)
+
+    avg_hours = round(sum(durations_hours) / len(durations_hours), 1) if durations_hours else 0.0
+    avg_days = round(avg_hours / 24.0, 1)
+
+    formatted_complaints = []
+    for c in complaints:
+        orig_img = c.images.first()
+        res_photo = c.resolution_evidence.photo_path if c.resolution_evidence else None
+
+        time_taken_str = None
+        if c.status == 'RESOLVED':
+            start_time = c.assigned_at or c.created_at
+            end_time = (c.resolution_evidence.verified_at if c.resolution_evidence else None) or c.updated_at
+            if start_time and end_time:
+                diff_h = (end_time - start_time).total_seconds() / 3600.0
+                if diff_h >= 24:
+                    time_taken_str = f"Solved in {round(diff_h / 24.0, 1)} days"
+                else:
+                    time_taken_str = f"Solved in {round(diff_h, 1)} hours"
+        elif c.status == 'OVERDUE' and c.sla_due_at:
+            now = datetime.utcnow()
+            diff_h = (now - c.sla_due_at).total_seconds() / 3600.0
+            time_taken_str = f"Overdue by {round(diff_h / 24.0, 1)} days"
+        elif c.sla_due_at:
+            now = datetime.utcnow()
+            diff_h = (c.sla_due_at - now).total_seconds() / 3600.0
+            if diff_h > 0:
+                time_taken_str = f"{round(diff_h / 24.0, 1)} days remaining" if diff_h >= 24 else f"{int(diff_h)}h remaining"
+            else:
+                time_taken_str = "SLA Deadline Exceeded"
+
+        formatted_complaints.append({
+            'id': c.id,
+            'complaint_code': c.complaint_code,
+            'category_name': c.category.name if c.category else 'Civic Issue',
+            'ward_name': c.ward.ward_name if c.ward else None,
+            'ward_number': c.ward.ward_number if c.ward else None,
+            'department_name': c.department.name if c.department else None,
+            'status': c.status,
+            'priority': c.priority,
+            'description': c.description,
+            'created_at': _format_utc(c.created_at),
+            'assigned_at': _format_utc(c.assigned_at),
+            'sla_due_at': _format_utc(c.sla_due_at),
+            'original_photo': orig_img.image_path if orig_img else None,
+            'resolution_photo': res_photo,
+            'time_taken_str': time_taken_str,
+            'progress_percent': c.progress_percent or 0,
+            'distance_from_original_m': round(c.resolution_evidence.distance_from_original_m, 1) if c.resolution_evidence else None
+        })
+
+    return jsonify({
+        'worker': worker.to_dict(),
+        'stats': {
+            'total_assigned': total,
+            'resolved_count': len(resolved),
+            'remaining_count': len(remaining),
+            'overdue_count': len(overdue),
+            'avg_resolution_days': avg_days,
+            'avg_resolution_hours': avg_hours,
+            'resolution_rate_percent': round((len(resolved) / total * 100), 1) if total > 0 else 0.0
+        },
+        'complaints': formatted_complaints
+    }), 200
+
+@admin_bp.route('/complaints/<int:complaint_id>/send-reminder', methods=['POST'])
+@roles_required('admin')
+def send_overdue_reminder(complaint_id):
+    complaint = Complaint.query.get_or_404(complaint_id)
+    if not complaint.assigned_worker_id:
+        return jsonify({'error': 'This complaint is not assigned to any worker'}), 400
+
+    data = request.get_json() or {}
+    custom_note = data.get('note', 'Urgent action required: This complaint has exceeded its SLA deadline.')
+
+    notification_service.send(
+        recipient_type='user',
+        recipient_ref_id=complaint.assigned_worker_id,
+        message=f"[ADMIN ESCALATION] Complaint {complaint.complaint_code} ({complaint.category.name if complaint.category else 'Civic Issue'}) is OVERDUE. {custom_note}",
+        complaint_id=complaint.id
+    )
+
+    db.session.add(ComplaintStatusHistory(
+        complaint_id=complaint.id,
+        old_status=complaint.status,
+        new_status=complaint.status,
+        changed_by_user_id=request.current_user.id,
+        remarks=f"Admin {request.current_user.name} issued an urgent overdue escalation notice to {complaint.assigned_worker.name if complaint.assigned_worker else 'worker'}. Note: {custom_note}"
+    ))
+    db.session.commit()
+    return jsonify({
+        'message': f"Urgent escalation notice successfully sent to {complaint.assigned_worker.name if complaint.assigned_worker else 'worker'}.",
+        'complaint': complaint.to_dict(include_sensitive=True)
+    }), 200
 
 @admin_bp.route('/complaints/<int:complaint_id>/assign-worker', methods=['PATCH'])
 @roles_required('admin')
@@ -59,6 +235,61 @@ def assignment_monitoring():
         Complaint.status.in_(['ASSIGNED', 'IN_PROGRESS', 'OVERDUE', 'REOPENED'])
     ).order_by(Complaint.updated_at.desc()).all()
     return jsonify({'complaints': [c.to_dict(include_sensitive=True) for c in complaints]}), 200
+
+@admin_bp.route('/complaints', methods=['GET'])
+@roles_required('admin')
+def get_all_complaints_admin():
+    """
+    Returns all complaints with photos, assigned worker details, resolution proof,
+    and computed duration for the Admin Overview explorer.
+    """
+    status_filter = request.args.get('status', 'ALL').strip().upper()
+    sla_service.check_and_escalate_overdue()
+
+    q = Complaint.query
+    if status_filter == 'RESOLVED':
+        q = q.filter(Complaint.status == 'RESOLVED')
+    elif status_filter == 'OVERDUE':
+        q = q.filter(Complaint.status == 'OVERDUE')
+    elif status_filter == 'IN_PROGRESS':
+        q = q.filter(Complaint.status.in_(['IN_PROGRESS', 'ASSIGNED', 'VERIFICATION_PENDING', 'REOPENED']))
+    elif status_filter != 'ALL':
+        q = q.filter(Complaint.status == status_filter)
+
+    complaints = q.order_by(Complaint.created_at.desc()).all()
+    results = []
+    now = datetime.utcnow()
+
+    for c in complaints:
+        data = c.to_dict(include_sensitive=True)
+        orig_img = c.images.first()
+        ev = c.resolution_evidence
+
+        time_taken_str = None
+        if c.status == 'RESOLVED':
+            start_time = c.assigned_at or c.created_at
+            end_time = (ev.verified_at if ev else None) or c.updated_at
+            if start_time and end_time:
+                diff_h = (end_time - start_time).total_seconds() / 3600.0
+                time_taken_str = f"Solved in {round(diff_h / 24.0, 1)} days" if diff_h >= 24 else f"Solved in {round(diff_h, 1)} hours"
+        elif c.status == 'OVERDUE' and c.sla_due_at:
+            diff_h = (now - c.sla_due_at).total_seconds() / 3600.0
+            time_taken_str = f"Overdue by {round(diff_h / 24.0, 1)} days"
+        elif c.sla_due_at:
+            diff_h = (c.sla_due_at - now).total_seconds() / 3600.0
+            if diff_h > 0:
+                time_taken_str = f"{round(diff_h / 24.0, 1)} days remaining" if diff_h >= 24 else f"{int(diff_h)}h remaining"
+            else:
+                time_taken_str = "SLA Breached"
+
+        data['time_taken_str'] = time_taken_str
+        data['original_photo'] = orig_img.image_path if orig_img else None
+        data['resolution_photo'] = ev.photo_path if ev else None
+        data['resolution_notes'] = ev.verification_notes if ev else None
+        data['distance_from_original_m'] = round(ev.distance_from_original_m, 1) if ev else None
+        results.append(data)
+
+    return jsonify({'complaints': results, 'total': len(results)}), 200
 
 # ----------------- Verification Queue (Section 17) -----------------
 @admin_bp.route('/verification-queue', methods=['GET'])

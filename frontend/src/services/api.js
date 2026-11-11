@@ -1,19 +1,27 @@
 import axios from 'axios';
 
 // Determine API base:
-// 1. If running on same origin as backend (e.g. Render unified app), use relative '/api'
-// 2. Otherwise (e.g. Vercel deployment), use environment variable VITE_API_BASE_URL
-const isLocalFrontend = typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-  window.location.port !== '5000';
-const isSameOriginBackend = typeof window !== 'undefined' &&
-  (window.location.hostname.includes('onrender.com') || window.location.hostname === 'localhost' && window.location.port === '5000');
+// When running locally on port 5000, 5173, localhost, or 127.0.0.1, always target local backend.
+const getApiBase = () => {
+  if (typeof window === 'undefined') return 'http://localhost:5000/api';
+  const { hostname, port, origin } = window.location;
+  
+  // If served directly by backend on port 5000 (whether localhost or 127.0.0.1)
+  if (port === '5000') {
+    return `${origin}/api`;
+  }
+  
+  // If on local Vite dev server (e.g. port 5173, 3000)
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+  if (isLocalHost) {
+    return 'http://localhost:5000/api';
+  }
+  
+  // Production fallback
+  return '/api';
+};
 
-export const API_BASE = isLocalFrontend
-  ? 'http://localhost:5000/api'
-  : isSameOriginBackend
-  ? '/api' 
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+export const API_BASE = getApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,

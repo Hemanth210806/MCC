@@ -18,4 +18,6 @@ data/
 reports/
 .venv/
 .venv*/
+*.db
+local-logs/
 

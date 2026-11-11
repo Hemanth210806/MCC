@@ -1,22 +1,18 @@
 // Server base URL derived dynamically from environment or origin
-const isLocalFrontend = typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-  window.location.port !== '5000';
+const getServerUrl = () => {
+  if (typeof window === 'undefined') return 'http://localhost:5000';
+  const { hostname, port, origin } = window.location;
+  if (port === '5000') {
+    return origin;
+  }
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+  if (isLocalHost) {
+    return 'http://localhost:5000';
+  }
+  return '';
+};
 
-const isSameOrigin = typeof window !== 'undefined' &&
-  (window.location.hostname.includes('onrender.com') ||
-    (window.location.hostname === 'localhost' && window.location.port === '5000'));
-
-const API_BASE = isLocalFrontend
-  ? 'http://localhost:5000/api'
-  : isSameOrigin
-  ? '/api' 
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
-
-export const SERVER_URL = isSameOrigin 
-  ? (typeof window !== 'undefined' ? window.location.origin : '') 
-  : API_BASE.replace(/\/api\/?$/, '');
-
+export const SERVER_URL = getServerUrl();
 
 // Verified high-quality civic issue and resolution evidence photographs
 export const CATEGORY_FALLBACKS = {
@@ -64,11 +60,6 @@ export function getImageUrl(path, categoryName = '', isResolution = false) {
   // If already absolute or data URI
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
-  }
-
-  // If it's a demo seed placeholder that doesn't exist on remote deployment
-  if (trimmed.includes('demo_issue') || trimmed.includes('demo_resolution')) {
-    return getCategoryFallback(categoryName, isResolution);
   }
 
   // Prepend backend server URL

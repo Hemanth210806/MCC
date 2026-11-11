@@ -43,5 +43,6 @@ class User(db.Model):
             'department_name': self.department.name if self.department else None,
             'ward_id': self.ward_id,
             'ward_name': self.ward.ward_name if self.ward else None,
+            'ward_number': self.ward.ward_number if self.ward else None,
             'created_at': _format_utc(self.created_at)
         }

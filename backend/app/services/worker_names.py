@@ -143,3 +143,4 @@ def update_all_worker_names_in_db():
         except Exception as e:
             db.session.rollback()
             print(f"[WorkerNames] Rollback on updating worker names: {e}")
+

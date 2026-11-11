@@ -77,7 +77,9 @@ def _initialize_database(app):
 
         try:
             from seed.seed_data import ensure_ward_department_workers
+            from app.services.worker_names import update_all_worker_names_in_db
             ensure_ward_department_workers()
+            update_all_worker_names_in_db()
         except Exception as e:
             app.logger.info(f"Worker directory sync note: {e}")
 
@@ -221,9 +223,10 @@ def create_app(config_name='development'):
                         department_id=department.id,
                     ))
             db.session.commit()
+            from app.services.worker_names import get_indian_worker_name
             demo_workers = (
-                ("Agrahara Ward Worker", "agrahara.worker@mcc.gov.in", "9880022102", "Agrahara", "Solid Waste Management"),
-                ("Vidhyaranyapuram Ward Worker", "vidhya.worker@mcc.gov.in", "9880033102", "Vidhyaranyapuram", "Roads & Infrastructure"),
+                (get_indian_worker_name(28, "Agrahara", "waste"), "agrahara.worker@mcc.gov.in", "9880022102", "Agrahara", "Solid Waste Management"),
+                (get_indian_worker_name(61, "Vidhyaranyapuram", "road"), "vidhya.worker@mcc.gov.in", "9880033102", "Vidhyaranyapuram", "Roads & Infrastructure"),
             )
             existing_demo_emails = {u.email: u for u in User.query.filter(User.email.in_([w[1] for w in demo_workers])).all()}
             demo_added = False

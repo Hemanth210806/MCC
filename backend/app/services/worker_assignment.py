@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.ward import Ward
 from app.extensions import db
 from app.utils.geo import haversine_distance_meters
+from app.services.worker_names import get_indian_worker_name, normalize_worker_name
 
 
 ACTIVE_WORK_STATUSES = ("ASSIGNED", "IN_PROGRESS", "OVERDUE", "REOPENED")
@@ -32,9 +33,10 @@ def _ensure_ward_worker(ward: Ward, department: Department, existing_workers: Op
         worker = existing_workers.get(email)
     else:
         worker = User.query.filter_by(email=email).first()
+    expected_name = get_indian_worker_name(ward.ward_number, ward.ward_name, department_slug)
     if not worker:
         worker = User(email=email)
-        worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
+        worker.name = expected_name
         worker.phone = f"98{ward.ward_number:03d}99001"
         worker.role = "ward_worker"
         worker.ward_id = ward.id
@@ -47,6 +49,8 @@ def _ensure_ward_worker(ward: Ward, department: Department, existing_workers: Op
         db.session.add(worker)
         if existing_workers is not None:
             existing_workers[email] = worker
+    elif worker.name != expected_name:
+        worker.name = expected_name
     return worker
 
 

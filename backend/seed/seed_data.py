@@ -19,6 +19,7 @@ from app.utils.id_generator import generate_complaint_code
 from app.utils.geo import haversine_distance_meters
 from app.services.hotspot_service import hotspot_service
 from app.services.worker_assignment import select_worker
+from app.services.worker_names import get_indian_worker_name, normalize_worker_name, update_all_worker_names_in_db
 
 WARD_DEPARTMENT_WORKER_SPECS = (
     ("waste", "Solid Waste Management"),
@@ -32,14 +33,14 @@ OWNER_PASSWORD = "Admin@123"
 
 DEMO_WORKERS = [
     {
-        "name": "Agrahara Ward Worker",
+        "name": get_indian_worker_name(28, "Agrahara", "waste"),
         "email": "agrahara.worker@mcc.gov.in",
         "phone": "9880022102",
         "ward_names": ("Agrahara",),
         "department": "Solid Waste Management",
     },
     {
-        "name": "Vidhyaranyapuram Ward Worker",
+        "name": get_indian_worker_name(61, "Vidhyaranyapuram", "road"),
         "email": "vidhya.worker@mcc.gov.in",
         "phone": "9880033102",
         "ward_names": ("Vidhyaranyapuram", "Vidyaranyapuram"),
@@ -74,7 +75,7 @@ def ensure_ward_department_workers():
                 worker = User(email=email)
                 db.session.add(worker)
             worker.set_password(WORKER_PASSWORD)
-            worker.name = f"{ward.ward_name} {department_slug.title()} Worker"
+            worker.name = get_indian_worker_name(ward.ward_number, ward.ward_name, department_slug)
             worker.phone = worker_phone_for(ward, department_slug)
             worker.role = "ward_worker"
             worker.department_id = department.id
@@ -284,10 +285,10 @@ def seed_database(app=None):
             db.session.add(u)
 
         workers = [
-            ("MCC Ward Worker SWM", "swm.worker@mcc.gov.in", "9880022101", dept_swm.id),
-            ("MCC Ward Worker Roads", "roads.worker@mcc.gov.in", "9880033101", dept_roads.id),
-            ("MCC Ward Worker Electrical", "elec.worker@mcc.gov.in", "9880044101", dept_elec.id),
-            ("MCC Ward Worker Water", "water.worker@mcc.gov.in", "9880055101", dept_water.id),
+            ("Ramesh Kumar (central_swm_worker)", "swm.worker@mcc.gov.in", "9880022101", dept_swm.id),
+            ("Suresh Gowda (central_roads_worker)", "roads.worker@mcc.gov.in", "9880033101", dept_roads.id),
+            ("Praveen Nayak (central_electrical_worker)", "elec.worker@mcc.gov.in", "9880044101", dept_elec.id),
+            ("Kavitha Rao (central_water_worker)", "water.worker@mcc.gov.in", "9880055101", dept_water.id),
         ]
         for name, email, phone, d_id in workers:
             u = User(name=name, email=email, phone=phone, role="ward_worker", department_id=d_id)

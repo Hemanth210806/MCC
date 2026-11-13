@@ -29,7 +29,10 @@ import {
   TrendingUp,
   ArrowUpDown,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  UserPlus,
+  Edit3,
+  Save
 } from 'lucide-react';
 import { formatDateTime } from '../utils/exifHelper';
 
@@ -82,6 +85,128 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
 
   // Photo Lightbox modal
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  // Add / Transfer Ward Worker Member Modal State
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [memberWardId, setMemberWardId] = useState('');
+  const [memberDeptId, setMemberDeptId] = useState('');
+  const [memberWorkerName, setMemberWorkerName] = useState('');
+  const [memberWorkerPhone, setMemberWorkerPhone] = useState('');
+  const [memberTransferReason, setMemberTransferReason] = useState('Personnel Transfer');
+  const [memberTransferNote, setMemberTransferNote] = useState('');
+  const [memberLookupLoading, setMemberLookupLoading] = useState(false);
+  const [memberSaving, setMemberSaving] = useState(false);
+  const [memberSuccessMsg, setMemberSuccessMsg] = useState('');
+  const [memberErrorMsg, setMemberErrorMsg] = useState('');
+  const [currentLookupWorker, setCurrentLookupWorker] = useState(null);
+
+  const fetchWorkerForWardDept = async (wardId, deptId) => {
+    if (!wardId || !deptId) return;
+    setMemberLookupLoading(true);
+    setMemberErrorMsg('');
+    try {
+      const res = await api.get(`/admin/workers/lookup?ward_id=${wardId}&department_id=${deptId}`);
+      if (res.data?.found && res.data.worker) {
+        setCurrentLookupWorker(res.data.worker);
+        setMemberWorkerName(res.data.worker.person_name || res.data.worker.name);
+        setMemberWorkerPhone(res.data.worker.phone || '');
+      } else {
+        setCurrentLookupWorker(null);
+        setMemberWorkerName('');
+        setMemberWorkerPhone('');
+      }
+    } catch (err) {
+      console.warn('Worker lookup error:', err);
+    } finally {
+      setMemberLookupLoading(false);
+    }
+  };
+
+  const openMemberModal = (prefillWorker = null) => {
+    setMemberSuccessMsg('');
+    setMemberErrorMsg('');
+    setMemberTransferReason('Personnel Transfer');
+    setMemberTransferNote('');
+
+    if (prefillWorker) {
+      const wId = prefillWorker.ward_id || (wards[0]?.id || '');
+      const dId = prefillWorker.department_id || (departments[0]?.id || '');
+      setMemberWardId(wId);
+      setMemberDeptId(dId);
+      const fullName = prefillWorker.name || '';
+      const cleanPersonName = fullName.replace(/\s*\([a-z0-9_]+_worker\)/i, '').trim();
+      setMemberWorkerName(cleanPersonName);
+      setMemberWorkerPhone(prefillWorker.phone || '');
+      setCurrentLookupWorker(prefillWorker);
+    } else {
+      const initialWardId = wards[0]?.id || '';
+      const initialDeptId = departments[0]?.id || '';
+      setMemberWardId(initialWardId);
+      setMemberDeptId(initialDeptId);
+      setMemberWorkerName('');
+      setMemberWorkerPhone('');
+      setCurrentLookupWorker(null);
+      if (initialWardId && initialDeptId) {
+        fetchWorkerForWardDept(initialWardId, initialDeptId);
+      }
+    }
+    setShowMemberModal(true);
+  };
+
+  const handleWardOrDeptChange = (newWardId, newDeptId) => {
+    setMemberWardId(newWardId);
+    setMemberDeptId(newDeptId);
+    setMemberSuccessMsg('');
+    setMemberErrorMsg('');
+    fetchWorkerForWardDept(newWardId, newDeptId);
+  };
+
+  const handleSaveMember = async (e) => {
+    if (e) e.preventDefault();
+    if (!memberWardId || !memberDeptId) {
+      setMemberErrorMsg('Please select both Ward and Department.');
+      return;
+    }
+    if (!memberWorkerName.trim()) {
+      setMemberErrorMsg('Please enter the worker name.');
+      return;
+    }
+
+    setMemberSaving(true);
+    setMemberErrorMsg('');
+    setMemberSuccessMsg('');
+    try {
+      const res = await api.post('/admin/workers/manage-member', {
+        ward_id: Number(memberWardId),
+        department_id: Number(memberDeptId),
+        name: memberWorkerName.trim(),
+        phone: memberWorkerPhone.trim(),
+        transfer_reason: memberTransferReason,
+        transfer_note: memberTransferNote.trim()
+      });
+
+      setMemberSuccessMsg(res.data.message || 'Worker member updated successfully! All pages are now refreshed with the new details.');
+      
+      // Reload all admin datasets
+      await loadData();
+
+      // If selected worker scorecard modal is currently open, refresh it as well
+      if (selectedWorkerId) {
+        api.get(`/admin/workers/${selectedWorkerId}/performance`)
+          .then(r => setWorkerDetailData(r.data))
+          .catch(() => {});
+      }
+
+      setTimeout(() => {
+        setShowMemberModal(false);
+        setMemberSuccessMsg('');
+      }, 1600);
+    } catch (err) {
+      setMemberErrorMsg(err.response?.data?.error || 'Failed to update worker details. Please try again.');
+    } finally {
+      setMemberSaving(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -1374,14 +1499,36 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
       {activeTab === 'workers' && (
         <div>
           {/* Section Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
-            <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+            <div style={{ flex: '1 1 300px' }}>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1f241a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Users size={22} color="#4b5e28" /> Field Worker Directory & Performance Scorecards ({workers.length})
               </h3>
               <p style={{ fontSize: '0.85rem', color: '#5e6654', marginTop: '4px' }}>
                 Full administrative access to all 65 Mysuru ward department workers. Filter by ward, department, or performance to inspect resolution speeds, active workloads, and original/resolution photographic proof.
               </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => openMemberModal()}
+                className="btn btn-primary"
+                style={{
+                  padding: '9px 16px',
+                  backgroundColor: '#4b5e28',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.88rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(75, 94, 40, 0.25)',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <UserPlus size={18} /> Add / Transfer Worker Member
+              </button>
             </div>
           </div>
 
@@ -1654,24 +1801,48 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                       </div>
                     </div>
 
-                    {/* Drill-down action button */}
-                    <button
-                      type="button"
-                      onClick={() => openWorkerScorecard(w.id)}
-                      className="btn btn-outline"
-                      style={{ 
-                        width: '100%', 
-                        padding: '8px 12px', 
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Camera size={15} /> View Performance & Complaint Photos <ChevronRight size={15} />
-                    </button>
+                    {/* Action buttons: Drill-down & Rename/Transfer */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => openWorkerScorecard(w.id)}
+                        className="btn btn-outline"
+                        style={{ 
+                          flex: '1 1 auto',
+                          padding: '8px 10px', 
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Camera size={14} /> Performance & Photos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openMemberModal(w)}
+                        className="btn btn-olive"
+                        style={{ 
+                          padding: '8px 12px', 
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          backgroundColor: '#4b5e28',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title="Rename or update contact number upon transfer/personnel change"
+                      >
+                        <Edit3 size={14} /> Rename / Transfer
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1709,9 +1880,31 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                     <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#4b5e28', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       WORKER PERFORMANCE SCORECARD & EVIDENCE
                     </span>
-                    <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
-                      {workerDetailData.worker.name}
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', margin: '4px 0' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        {workerDetailData.worker.name}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => openMemberModal(workerDetailData.worker)}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          backgroundColor: '#edf4e4',
+                          color: '#3c4c1f',
+                          border: '1px solid #b8df9c',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer'
+                        }}
+                        title="Rename person or update contact number upon personnel changes"
+                      >
+                        <Edit3 size={13} /> Rename / Transfer
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', gap: '14px', fontSize: '0.82rem', color: '#475569', flexWrap: 'wrap' }}>
                       <span>Ward: <strong>{workerDetailData.worker.ward_name || `Ward ${workerDetailData.worker.ward_number}`}</strong></span>
                       <span>Department: <strong>{workerDetailData.worker.department_name}</strong></span>
@@ -2134,6 +2327,288 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                 <Check size={16} /> Approve as Resolved
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. MANAGE / ADD / TRANSFER WARD WORKER MEMBER MODAL */}
+      {showMemberModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '16px'
+        }}>
+          <div className="card" style={{
+            maxWidth: '620px',
+            width: '100%',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            padding: '26px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1.5px solid #d4af37',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.25)'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1.5px solid #e8dfc9', paddingBottom: '14px', marginBottom: '16px' }}>
+              <div>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#4b5e28', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <UserPlus size={15} /> MCC PERSONNEL & STAFF MANAGEMENT
+                </span>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1f241a', margin: '4px 0' }}>
+                  Manage Ward Department Worker
+                </h3>
+                <p style={{ fontSize: '0.80rem', color: '#5e6654', margin: 0, lineHeight: 1.4 }}>
+                  Select the ward and department to view current worker details, rename personnel, or update contact numbers upon transfers, retirements, or staff changes.
+                </p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowMemberModal(false)} 
+                style={{ background: 'none', border: 'none', fontSize: '1.6rem', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Alert Messages */}
+            {memberSuccessMsg && (
+              <div style={{
+                backgroundColor: '#f0fdf4',
+                border: '1.5px solid #86efac',
+                color: '#166534',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0 }} />
+                <span>{memberSuccessMsg}</span>
+              </div>
+            )}
+
+            {memberErrorMsg && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '1.5px solid #fca5a5',
+                color: '#991b1b',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <ShieldAlert size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+                <span>{memberErrorMsg}</span>
+              </div>
+            )}
+
+            {/* Current Status Preview Box */}
+            <div style={{
+              backgroundColor: '#fcfaf5',
+              border: '1.5px solid #e5dcbe',
+              borderRadius: '9px',
+              padding: '12px 14px',
+              marginBottom: '18px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#4b5e28', textTransform: 'uppercase' }}>
+                  CURRENT DESIGNATED WORKER
+                </span>
+                {memberLookupLoading ? (
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Checking directory...</span>
+                ) : currentLookupWorker ? (
+                  <span className="badge" style={{ backgroundColor: '#edf4e4', color: '#3c4c1f', fontSize: '0.70rem', fontWeight: 700 }}>
+                    Active Assignment
+                  </span>
+                ) : (
+                  <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.70rem', fontWeight: 700 }}>
+                    New Assignment
+                  </span>
+                )}
+              </div>
+
+              {currentLookupWorker ? (
+                <div>
+                  <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#1f241a' }}>
+                    {currentLookupWorker.name}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#555e4c', marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    <span>Phone: <strong>{currentLookupWorker.phone || 'None registered'}</strong></span>
+                    <span>•</span>
+                    <span>Email: <strong>{currentLookupWorker.email}</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.80rem', color: '#64748b', fontStyle: 'italic' }}>
+                  No existing worker record found for this ward and department. Saving will create and register a new designated worker.
+                </div>
+              )}
+            </div>
+
+            {/* Form Inputs */}
+            <form onSubmit={handleSaveMember}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                {/* Ward Selection */}
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                    SELECT WARD ({wards.length} Wards) *
+                  </label>
+                  <select
+                    className="form-select"
+                    value={memberWardId}
+                    onChange={(e) => handleWardOrDeptChange(e.target.value, memberDeptId)}
+                    style={{ width: '100%', fontSize: '0.86rem', padding: '9px 10px' }}
+                    required
+                  >
+                    <option value="">-- Choose Ward --</option>
+                    {[...wards].sort((a,b) => (a.ward_number || 0) - (b.ward_number || 0)).map((wd) => (
+                      <option key={wd.id} value={wd.id}>
+                        Ward {wd.ward_number}: {wd.ward_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Department Selection */}
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                    SELECT DEPARTMENT *
+                  </label>
+                  <select
+                    className="form-select"
+                    value={memberDeptId}
+                    onChange={(e) => handleWardOrDeptChange(memberWardId, e.target.value)}
+                    style={{ width: '100%', fontSize: '0.86rem', padding: '9px 10px' }}
+                    required
+                  >
+                    <option value="">-- Choose Department --</option>
+                    {departments.map((dp) => (
+                      <option key={dp.id} value={dp.id}>
+                        {dp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Worker Name Input */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                  WORKER FULL NAME (NEW / REASSIGNED) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Gowda, Girish Nayak..."
+                  value={memberWorkerName}
+                  onChange={(e) => setMemberWorkerName(e.target.value)}
+                  className="form-input"
+                  style={{ width: '100%', fontSize: '0.88rem', padding: '9px 12px' }}
+                />
+                <div style={{ fontSize: '0.72rem', color: '#68755c', marginTop: '3px' }}>
+                  Enter personal name. The system automatically maintains the department bracket identifier for administrative consistency.
+                </div>
+              </div>
+
+              {/* Contact Phone Input */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                  CONTACT MOBILE PHONE NUMBER
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9845011223"
+                  value={memberWorkerPhone}
+                  onChange={(e) => setMemberWorkerPhone(e.target.value)}
+                  className="form-input"
+                  style={{ width: '100%', fontSize: '0.88rem', padding: '9px 12px' }}
+                />
+                <div style={{ fontSize: '0.72rem', color: '#68755c', marginTop: '3px' }}>
+                  Mobile number for dispatch alerts, SMS notifications, and public verification.
+                </div>
+              </div>
+
+              {/* Reason for Change */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                  PERSONNEL CHANGE REASON
+                </label>
+                <select
+                  className="form-select"
+                  value={memberTransferReason}
+                  onChange={(e) => setMemberTransferReason(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.86rem', padding: '9px 10px' }}
+                >
+                  <option value="Personnel Transfer">Personnel Transfer / Routine Ward Rotation</option>
+                  <option value="Staff Replacement / Retirement">Staff Replacement / Retirement / Deceased</option>
+                  <option value="New Recruitment">New Field Staff Recruitment</option>
+                  <option value="Promotion / Reassignment">Promotion / Departmental Reassignment</option>
+                  <option value="Name & Contact Correction">Name & Contact Information Correction</option>
+                </select>
+              </div>
+
+              {/* Administrative Transfer Note */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38481d', display: 'block', marginBottom: '5px' }}>
+                  ADMINISTRATIVE NOTES (OPTIONAL)
+                </label>
+                <textarea
+                  className="form-textarea"
+                  rows="2"
+                  placeholder="e.g. Transferred from Ward 12 as per MCC circular order..."
+                  value={memberTransferNote}
+                  onChange={(e) => setMemberTransferNote(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowMemberModal(false)}
+                  className="btn btn-outline"
+                  disabled={memberSaving}
+                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={memberSaving || memberLookupLoading}
+                  className="btn btn-olive"
+                  style={{
+                    padding: '8px 18px',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    backgroundColor: '#4b5e28',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(75, 94, 40, 0.25)'
+                  }}
+                >
+                  <Save size={16} /> {memberSaving ? 'Saving & Updating All Pages...' : 'Save & Update Worker Details'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

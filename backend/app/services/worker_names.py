@@ -132,7 +132,8 @@ def update_all_worker_names_in_db():
                 w_name = prefix
 
         expected_name = get_indian_worker_name(w_num, w_name, dept_slug)
-        if worker.name != expected_name:
+        # Only populate if the worker lacks a name or has the old legacy format without bracket tags
+        if not worker.name or "(" not in worker.name:
             worker.name = expected_name
             updated = True
 

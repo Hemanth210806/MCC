@@ -13,7 +13,24 @@ from app.services.sla_service import sla_service
 from app.services.notification_service import notification_service
 from app.services.hotspot_service import hotspot_service
 from app.services.health_score_service import health_score_service
+from app.services.worker_names import normalize_worker_name
 from app.routes.auth import token_required, roles_required
+import re
+
+DEPT_SLUG_BY_NAME = {
+    'Solid Waste Management': 'waste',
+    'Roads & Infrastructure': 'road',
+    'Electrical & Street Lighting': 'street',
+    'Water Supply & Sewerage': 'water'
+}
+
+def _split_worker_name(full_name: str):
+    if not full_name:
+        return "", ""
+    match = re.match(r'^(.*?)\s*(\([a-z0-9_]+_worker\))$', full_name.strip(), re.IGNORECASE)
+    if match:
+        return match.group(1).strip(), match.group(2).strip()
+    return full_name.strip(), ""
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -79,6 +96,182 @@ def list_workers():
         result.append(u_dict)
 
     return jsonify({'workers': result}), 200
+
+@admin_bp.route('/workers/lookup', methods=['GET'])
+@roles_required('admin')
+def lookup_worker_by_ward_and_dept():
+    """
+    Finds the designated worker for a specific ward and department.
+    Allows admin to inspect the current worker's name and contact number.
+    """
+    ward_id = request.args.get('ward_id', type=int)
+    ward_number = request.args.get('ward_number', type=int)
+    department_id = request.args.get('department_id', type=int)
+    department_slug = request.args.get('department_slug', type=str)
+
+    ward = None
+    if ward_id:
+        ward = Ward.query.get(ward_id)
+    elif ward_number:
+        ward = Ward.query.filter_by(ward_number=ward_number).first()
+
+    department = None
+    if department_id:
+        department = Department.query.get(department_id)
+    elif department_slug:
+        dept_name = {
+            'waste': 'Solid Waste Management',
+            'road': 'Roads & Infrastructure',
+            'street': 'Electrical & Street Lighting',
+            'water': 'Water Supply & Sewerage'
+        }.get(department_slug)
+        if dept_name:
+            department = Department.query.filter_by(name=dept_name).first()
+
+    if not ward or not department:
+        return jsonify({'error': 'Valid ward and department are required'}), 400
+
+    dept_slug = DEPT_SLUG_BY_NAME.get(department.name, 'road')
+    ward_slug = normalize_worker_name(ward.ward_name)
+    tag = f"({ward_slug}_{dept_slug}_worker)"
+    canonical_email = f"{ward_slug}_{dept_slug}@mcc.gov.in"
+
+    worker = User.query.filter_by(
+        ward_id=ward.id,
+        department_id=department.id,
+        role='ward_worker'
+    ).first()
+
+    if not worker:
+        worker = User.query.filter_by(email=canonical_email).first()
+
+    if worker:
+        person_name, bracket_tag = _split_worker_name(worker.name)
+        return jsonify({
+            'found': True,
+            'worker': {
+                'id': worker.id,
+                'name': worker.name,
+                'person_name': person_name,
+                'bracket_tag': bracket_tag or tag,
+                'email': worker.email,
+                'phone': worker.phone or '',
+                'ward_id': ward.id,
+                'ward_number': ward.ward_number,
+                'ward_name': ward.ward_name,
+                'department_id': department.id,
+                'department_name': department.name
+            }
+        }), 200
+
+    return jsonify({
+        'found': False,
+        'worker': None,
+        'suggested': {
+            'ward_id': ward.id,
+            'ward_number': ward.ward_number,
+            'ward_name': ward.ward_name,
+            'department_id': department.id,
+            'department_name': department.name,
+            'email': canonical_email,
+            'bracket_tag': tag
+        }
+    }), 200
+
+@admin_bp.route('/workers/manage-member', methods=['POST'])
+@roles_required('admin')
+def manage_worker_member():
+    """
+    Enables MCC Admin to add, rename, update phone number, or transfer
+    a ward department worker when transfers, deaths, or personnel rotations happen.
+    The updated name and phone immediately reflect across all complaints,
+    scorecards, and directory views.
+    """
+    data = request.get_json() or {}
+    ward_id = data.get('ward_id')
+    department_id = data.get('department_id')
+    new_name = (data.get('name') or '').strip()
+    new_phone = (data.get('phone') or '').strip()
+    transfer_reason = data.get('transfer_reason', 'Transfer / Personnel Change')
+    transfer_note = data.get('transfer_note', '')
+
+    if not ward_id or not department_id:
+        return jsonify({'error': 'Ward and Department are required'}), 400
+    if not new_name:
+        return jsonify({'error': 'Worker name is required'}), 400
+
+    ward = Ward.query.get(ward_id)
+    department = Department.query.get(department_id)
+    if not ward or not department:
+        return jsonify({'error': 'Invalid ward or department'}), 404
+
+    dept_slug = DEPT_SLUG_BY_NAME.get(department.name, 'road')
+    ward_slug = normalize_worker_name(ward.ward_name)
+    tag = f"({ward_slug}_{dept_slug}_worker)"
+    canonical_email = f"{ward_slug}_{dept_slug}@mcc.gov.in"
+
+    # Format the name: if person typed "Suresh Gowda", format as "Suresh Gowda (ittigegudu_road_worker)"
+    if f"({ward_slug}_{dept_slug}_worker)" not in new_name and not re.search(r'\([a-z0-9_]+_worker\)', new_name, re.IGNORECASE):
+        formatted_name = f"{new_name} {tag}"
+    else:
+        formatted_name = new_name
+
+    worker = User.query.filter_by(
+        ward_id=ward.id,
+        department_id=department.id,
+        role='ward_worker'
+    ).first()
+
+    if not worker:
+        worker = User.query.filter_by(email=canonical_email).first()
+
+    is_new = False
+    old_name = ""
+    old_phone = ""
+
+    if worker:
+        old_name = worker.name
+        old_phone = worker.phone or "N/A"
+        worker.name = formatted_name
+        if new_phone:
+            worker.phone = new_phone
+        worker.ward_id = ward.id
+        worker.department_id = department.id
+    else:
+        is_new = True
+        worker = User(
+            name=formatted_name,
+            email=canonical_email,
+            phone=new_phone or f"98{ward.ward_number:03d}01001",
+            role='ward_worker',
+            ward_id=ward.id,
+            department_id=department.id
+        )
+        worker.set_password('Worker@123')
+        db.session.add(worker)
+
+    # Log to audit trail
+    current_admin_id = getattr(request, 'current_user', None).id if getattr(request, 'current_user', None) else None
+    audit_desc = (
+        f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: Worker updated from '{old_name}' (Phone: {old_phone}) to '{formatted_name}' (Phone: {worker.phone}). Reason: {transfer_reason}. Note: {transfer_note}"
+        if not is_new else
+        f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: New worker added '{formatted_name}' (Phone: {worker.phone}). Reason: {transfer_reason}. Note: {transfer_note}"
+    )
+    db.session.add(AuditLog(
+        user_id=current_admin_id,
+        action='WORKER_MEMBER_TRANSFERRED' if not is_new else 'WORKER_MEMBER_ADDED',
+        entity_type='User',
+        entity_id=worker.id if not is_new else None,
+        details=audit_desc
+    ))
+
+    db.session.commit()
+
+    return jsonify({
+        'message': f"Worker successfully {'updated' if not is_new else 'assigned'} for Ward {ward.ward_number} ({department.name}).",
+        'worker': worker.to_dict(),
+        'person_name': _split_worker_name(worker.name)[0]
+    }), 200
 
 @admin_bp.route('/workers/<int:worker_id>/performance', methods=['GET'])
 @roles_required('admin')

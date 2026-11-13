@@ -73,13 +73,18 @@ def ensure_ward_department_workers():
             worker = User.query.filter_by(email=email).first()
             if not worker:
                 worker = User(email=email)
+                worker.set_password(WORKER_PASSWORD)
+                worker.name = get_indian_worker_name(ward.ward_number, ward.ward_name, department_slug)
+                worker.phone = worker_phone_for(ward, department_slug)
+                worker.role = "ward_worker"
+                worker.department_id = department.id
+                worker.ward_id = ward.id
                 db.session.add(worker)
-            worker.set_password(WORKER_PASSWORD)
-            worker.name = get_indian_worker_name(ward.ward_number, ward.ward_name, department_slug)
-            worker.phone = worker_phone_for(ward, department_slug)
-            worker.role = "ward_worker"
-            worker.department_id = department.id
-            worker.ward_id = ward.id
+            else:
+                if not worker.name:
+                    worker.name = get_indian_worker_name(ward.ward_number, ward.ward_name, department_slug)
+                if not worker.phone:
+                    worker.phone = worker_phone_for(ward, department_slug)
     db.session.commit()
     backfill_complaint_assignments()
 

@@ -94,6 +94,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
   const [memberWorkerPhone, setMemberWorkerPhone] = useState('');
   const [memberTransferReason, setMemberTransferReason] = useState('Personnel Transfer');
   const [memberTransferNote, setMemberTransferNote] = useState('');
+  const [memberResetStats, setMemberResetStats] = useState(true);
   const [memberLookupLoading, setMemberLookupLoading] = useState(false);
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberSuccessMsg, setMemberSuccessMsg] = useState('');
@@ -127,6 +128,7 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
     setMemberErrorMsg('');
     setMemberTransferReason('Personnel Transfer');
     setMemberTransferNote('');
+    setMemberResetStats(true);
 
     if (prefillWorker) {
       const wId = prefillWorker.ward_id || (wards[0]?.id || '');
@@ -182,7 +184,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
         name: memberWorkerName.trim(),
         phone: memberWorkerPhone.trim(),
         transfer_reason: memberTransferReason,
-        transfer_note: memberTransferNote.trim()
+        transfer_note: memberTransferNote.trim(),
+        reset_statistics: memberResetStats
       });
 
       setMemberSuccessMsg(res.data.message || 'Worker member updated successfully! All pages are now refreshed with the new details.');
@@ -2623,6 +2626,32 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   <option value="Promotion / Reassignment">Promotion / Departmental Reassignment</option>
                   <option value="Name & Contact Correction">Name & Contact Information Correction</option>
                 </select>
+              </div>
+
+              {/* Handover & Reset Statistics Option */}
+              <div style={{
+                padding: '12px 14px',
+                backgroundColor: '#edf4e4',
+                border: '1.5px solid #b8df9c',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px'
+              }}>
+                <input
+                  type="checkbox"
+                  id="resetStatsCheck"
+                  checked={memberResetStats}
+                  onChange={(e) => setMemberResetStats(e.target.checked)}
+                  style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: '#4b5e28', cursor: 'pointer' }}
+                />
+                <label htmlFor="resetStatsCheck" style={{ fontSize: '0.82rem', color: '#273813', cursor: 'pointer', lineHeight: 1.4 }}>
+                  <strong>Handover Active Work & Initiate Fresh Personal Scorecard</strong>
+                  <div style={{ fontSize: '0.74rem', color: '#556940', marginTop: '2px' }}>
+                    When enabled, all active/pending complaints will automatically be assigned to this new worker, past resolved accomplishments remain credited to the previous worker, and this worker starts with 0 resolved tasks to build their own performance statistics.
+                  </div>
+                </label>
               </div>
 
               {/* Administrative Transfer Note */}

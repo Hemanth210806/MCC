@@ -216,6 +216,8 @@ def manage_worker_member():
     else:
         formatted_name = new_name
 
+    reset_statistics = data.get('reset_statistics', True)
+
     worker = User.query.filter_by(
         ward_id=ward.id,
         department_id=department.id,
@@ -223,13 +225,65 @@ def manage_worker_member():
     ).first()
 
     if not worker:
-        worker = User.query.filter_by(email=canonical_email).first()
+        worker = User.query.filter_by(email=canonical_email, role='ward_worker').first()
+
+    active_statuses = ('SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE', 'VERIFICATION_PENDING')
+    current_person_name, _ = _split_worker_name(worker.name) if worker else ("", "")
+    new_person_name, _ = _split_worker_name(formatted_name)
+
+    # Check if a new person is replacing an existing worker
+    is_replacement = (
+        worker is not None 
+        and bool(current_person_name) 
+        and (current_person_name.lower() != new_person_name.lower()) 
+        and reset_statistics
+    )
 
     is_new = False
     old_name = ""
     old_phone = ""
+    handed_over_count = 0
 
-    if worker:
+    if is_replacement:
+        old_worker = worker
+        old_name = old_worker.name
+        old_phone = old_worker.phone or "N/A"
+
+        # 1. Archive the outgoing worker so their past resolved accomplishments remain preserved
+        old_worker.role = 'archived_worker'
+        old_worker.email = f"archived_{old_worker.id}_{canonical_email}"
+
+        # 2. Create the newly assigned worker with fresh scorecard
+        worker = User(
+            name=formatted_name,
+            email=canonical_email,
+            phone=new_phone or old_worker.phone or f"98{ward.ward_number:03d}01001",
+            role='ward_worker',
+            ward_id=ward.id,
+            department_id=department.id
+        )
+        worker.set_password('Worker@123')
+        db.session.add(worker)
+        db.session.flush()
+
+        # 3. Automatically hand over active / pending work from old worker to new worker
+        active_complaints = Complaint.query.filter(
+            Complaint.assigned_worker_id == old_worker.id,
+            Complaint.status.in_(active_statuses)
+        ).all()
+        handed_over_count = len(active_complaints)
+
+        for comp in active_complaints:
+            comp.assigned_worker_id = worker.id
+            comp.assigned_at = datetime.utcnow()
+            db.session.add(ComplaintStatusHistory(
+                complaint_id=comp.id,
+                old_status=comp.status,
+                new_status=comp.status,
+                remarks=f"Active civic complaint automatically handed over to newly assigned field worker {worker.name} upon personnel transfer (Transferred from previous worker {old_worker.name})."
+            ))
+    elif worker:
+        # Same worker being edited (e.g. phone update or typo correction)
         old_name = worker.name
         old_phone = worker.phone or "N/A"
         worker.name = formatted_name
@@ -238,6 +292,7 @@ def manage_worker_member():
         worker.ward_id = ward.id
         worker.department_id = department.id
     else:
+        # Brand new worker assignment
         is_new = True
         worker = User(
             name=formatted_name,
@@ -249,28 +304,68 @@ def manage_worker_member():
         )
         worker.set_password('Worker@123')
         db.session.add(worker)
+        db.session.flush()
+
+        # Automatically assign any unassigned open complaints for this ward & dept
+        unassigned_complaints = Complaint.query.filter(
+            Complaint.ward_id == ward.id,
+            Complaint.department_id == department.id,
+            Complaint.assigned_worker_id.is_(None),
+            Complaint.status.in_(active_statuses)
+        ).all()
+        handed_over_count = len(unassigned_complaints)
+        for comp in unassigned_complaints:
+            comp.assigned_worker_id = worker.id
+            comp.assigned_at = datetime.utcnow()
+            db.session.add(ComplaintStatusHistory(
+                complaint_id=comp.id,
+                old_status=comp.status,
+                new_status=comp.status,
+                remarks=f"Assigned to designated field worker {worker.name}."
+            ))
 
     # Log to audit trail
     current_admin_id = getattr(request, 'current_user', None).id if getattr(request, 'current_user', None) else None
-    audit_desc = (
-        f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: Worker updated from '{old_name}' (Phone: {old_phone}) to '{formatted_name}' (Phone: {worker.phone}). Reason: {transfer_reason}. Note: {transfer_note}"
-        if not is_new else
-        f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: New worker added '{formatted_name}' (Phone: {worker.phone}). Reason: {transfer_reason}. Note: {transfer_note}"
-    )
+    if is_replacement:
+        audit_desc = (
+            f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: Worker replaced. Outgoing worker '{old_name}' archived. "
+            f"New worker '{formatted_name}' assigned (Phone: {worker.phone}). Handed over {handed_over_count} active complaints. "
+            f"Fresh scorecard initiated. Reason: {transfer_reason}. Note: {transfer_note}"
+        )
+    elif not is_new:
+        audit_desc = (
+            f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: Worker details updated from '{old_name}' (Phone: {old_phone}) "
+            f"to '{formatted_name}' (Phone: {worker.phone}). Reason: {transfer_reason}. Note: {transfer_note}"
+        )
+    else:
+        audit_desc = (
+            f"Ward {ward.ward_number} ({ward.ward_name}) - {department.name}: New worker added '{formatted_name}' (Phone: {worker.phone}). "
+            f"Assigned {handed_over_count} pending complaints. Reason: {transfer_reason}. Note: {transfer_note}"
+        )
+
     db.session.add(AuditLog(
         user_id=current_admin_id,
-        action='WORKER_MEMBER_TRANSFERRED' if not is_new else 'WORKER_MEMBER_ADDED',
+        action='WORKER_MEMBER_TRANSFERRED' if is_replacement else ('WORKER_MEMBER_UPDATED' if not is_new else 'WORKER_MEMBER_ADDED'),
         entity_type='User',
-        entity_id=worker.id if not is_new else None,
+        entity_id=worker.id,
         details=audit_desc
     ))
 
     db.session.commit()
 
+    if is_replacement:
+        resp_msg = f"New worker '{new_person_name}' registered successfully! {handed_over_count} active pending complaints handed over, and fresh performance scorecard initiated."
+    elif not is_new:
+        resp_msg = f"Worker details successfully updated for Ward {ward.ward_number} ({department.name})."
+    else:
+        resp_msg = f"New worker '{new_person_name}' assigned for Ward {ward.ward_number} ({department.name}) with {handed_over_count} complaints assigned."
+
     return jsonify({
-        'message': f"Worker successfully {'updated' if not is_new else 'assigned'} for Ward {ward.ward_number} ({department.name}).",
+        'message': resp_msg,
         'worker': worker.to_dict(),
-        'person_name': _split_worker_name(worker.name)[0]
+        'person_name': new_person_name,
+        'handed_over_count': handed_over_count,
+        'is_replacement': is_replacement
     }), 200
 
 @admin_bp.route('/workers/<int:worker_id>/performance', methods=['GET'])

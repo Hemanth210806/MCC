@@ -508,61 +508,103 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
   return (
     <div className="container" style={{ padding: '30px 20px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4b5e28' }}>
             MCC ADMINISTRATIVE CONTROL
           </span>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1f241a' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1f241a', margin: '2px 0 0 0' }}>
             City Administration & Verification Console
           </h2>
         </div>
 
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={() => setActiveTab('verification')}
-            className={`btn ${activeTab === 'verification' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <CheckCircle2 size={16} /> Verification Queue ({queue.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <BarChart3 size={16} /> Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab('hotspots')}
-            className={`btn ${activeTab === 'hotspots' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <Flame size={16} /> Hotspots ({hotspots.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('recurring')}
-            className={`btn ${activeTab === 'recurring' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <RefreshCw size={16} /> Recurring ({recurring.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('overdue')}
-            className={`btn ${activeTab === 'overdue' ? 'btn-primary' : 'btn-outline'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <Clock size={16} /> Overdue ({overdueList.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('workers')} 
-            className={`btn ${activeTab === 'workers' ? 'btn-primary' : 'btn-outline'}`} 
-            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-          >
-            <Users size={16} /> Worker Directory & Scorecards ({workers.length})
-          </button>
-        </div>
+        {/* Primary Action Button: Add / Transfer Member */}
+        <button
+          type="button"
+          onClick={() => openMemberModal()}
+          className="btn btn-primary"
+          style={{
+            padding: '10px 18px',
+            backgroundColor: '#4b5e28',
+            color: '#ffffff',
+            fontWeight: 800,
+            fontSize: '0.90rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(75, 94, 40, 0.25)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            border: 'none'
+          }}
+        >
+          <UserPlus size={18} /> ➕ Add / Transfer Worker Member
+        </button>
+      </div>
+
+      {/* Tab Navigation Ribbon */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center' }}>
+        <button 
+          onClick={() => setActiveTab('verification')}
+          className={`btn ${activeTab === 'verification' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <CheckCircle2 size={16} /> Verification Queue ({queue.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('overview')}
+          className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <BarChart3 size={16} /> Overview
+        </button>
+        <button 
+          onClick={() => setActiveTab('hotspots')}
+          className={`btn ${activeTab === 'hotspots' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <Flame size={16} /> Hotspots ({hotspots.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('recurring')}
+          className={`btn ${activeTab === 'recurring' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <RefreshCw size={16} /> Recurring ({recurring.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('overdue')}
+          className={`btn ${activeTab === 'overdue' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <Clock size={16} /> Overdue ({overdueList.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('workers')} 
+          className={`btn ${activeTab === 'workers' ? 'btn-primary' : 'btn-outline'}`} 
+          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <Users size={16} /> Worker Directory & Scorecards ({workers.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => openMemberModal()}
+          className="btn btn-outline"
+          style={{
+            padding: '8px 16px',
+            fontSize: '0.85rem',
+            fontWeight: 800,
+            borderColor: '#b8df9c',
+            backgroundColor: '#edf4e4',
+            color: '#3c4c1f',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          <UserPlus size={16} /> ➕ Add Member
+        </button>
       </div>
 
       {/* 1. Verification Queue Tab */}
@@ -780,8 +822,8 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
           {/* DYNAMIC COMPLAINTS EXPLORER SECTION (Linked to the clicked box) */}
           <div style={{ borderTop: '2px solid #e5dcbe', paddingTop: '20px' }}>
             {/* Header with Title & Description */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ flex: '1 1 320px' }}>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1f241a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {overviewMetric === 'ALL' && <><Camera size={22} color="#4b5e28" /> All Registered Complaints with Photos ({filteredOverviewComplaints.length})</>}
                   {overviewMetric === 'RESOLVED' && <><CheckCircle2 size={22} color="#16a34a" /> Verified Resolved Complaints with Resolution Photos ({filteredOverviewComplaints.length})</>}
@@ -795,6 +837,26 @@ export default function AdminDashboard({ initialTab = 'verification' }) {
                   {overviewMetric === 'OVERDUE' && 'Showing complaints that exceeded SLA target hours without resolution. Take direct administrative action below.'}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => openMemberModal()}
+                className="btn btn-primary"
+                style={{
+                  padding: '9px 16px',
+                  backgroundColor: '#4b5e28',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  boxShadow: '0 2px 6px rgba(75, 94, 40, 0.2)',
+                  borderRadius: '7px',
+                  cursor: 'pointer'
+                }}
+              >
+                <UserPlus size={16} /> ➕ Add / Transfer Worker Member
+              </button>
             </div>
 
             {/* Search and Filters for Overview Explorer */}
